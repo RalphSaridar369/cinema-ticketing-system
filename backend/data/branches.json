@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "name": "CineMax Downtown",
+    "address": "Downtown Beirut",
+    "city": "Beirut",
+    "latitude": 33.8959,
+    "longitude": 35.4784,
+    "phone": "+961 1 100 001",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 2,
+    "name": "CineMax Achrafieh",
+    "address": "Achrafieh",
+    "city": "Beirut",
+    "latitude": 33.8894,
+    "longitude": 35.516,
+    "phone": "+961 1 100 002",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 3,
+    "name": "CineMax Hamra",
+    "address": "Hamra",
+    "city": "Beirut",
+    "latitude": 33.895,
+    "longitude": 35.484,
+    "phone": "+961 1 100 003",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 4,
+    "name": "CineMax Jounieh",
+    "address": "Jounieh",
+    "city": "Jounieh",
+    "latitude": 33.9808,
+    "longitude": 35.6178,
+    "phone": "+961 9 100 004",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 5,
+    "name": "CineMax Tripoli",
+    "address": "Tripoli",
+    "city": "Tripoli",
+    "latitude": 34.4367,
+    "longitude": 35.8497,
+    "phone": "+961 6 100 005",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  }
+]

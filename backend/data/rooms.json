@@ -1,0 +1,722 @@
+[
+  {
+    "id": 1,
+    "branch_id": 1,
+    "name": "Room 1",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 2,
+    "branch_id": 1,
+    "name": "Room 2",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 3,
+    "branch_id": 1,
+    "name": "Room 3",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 4,
+    "branch_id": 1,
+    "name": "Room 4",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 5,
+    "branch_id": 1,
+    "name": "Room 5",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 6,
+    "branch_id": 1,
+    "name": "Room 6",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 7,
+    "branch_id": 1,
+    "name": "Room 7",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 8,
+    "branch_id": 1,
+    "name": "Room 8",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 9,
+    "branch_id": 1,
+    "name": "Room 9",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 10,
+    "branch_id": 1,
+    "name": "Room 10",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 11,
+    "branch_id": 1,
+    "name": "Room 11",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 12,
+    "branch_id": 1,
+    "name": "Room 12",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 13,
+    "branch_id": 1,
+    "name": "Room 13",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 14,
+    "branch_id": 1,
+    "name": "Room 14",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 15,
+    "branch_id": 1,
+    "name": "Room 15",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 16,
+    "branch_id": 1,
+    "name": "Room 16",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 17,
+    "branch_id": 2,
+    "name": "Room 1",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 18,
+    "branch_id": 2,
+    "name": "Room 2",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 19,
+    "branch_id": 2,
+    "name": "Room 3",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 20,
+    "branch_id": 2,
+    "name": "Room 4",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 21,
+    "branch_id": 2,
+    "name": "Room 5",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 22,
+    "branch_id": 2,
+    "name": "Room 6",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 23,
+    "branch_id": 2,
+    "name": "Room 7",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 24,
+    "branch_id": 2,
+    "name": "Room 8",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 25,
+    "branch_id": 2,
+    "name": "Room 9",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 26,
+    "branch_id": 2,
+    "name": "Room 10",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 27,
+    "branch_id": 2,
+    "name": "Room 11",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 28,
+    "branch_id": 2,
+    "name": "Room 12",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 29,
+    "branch_id": 2,
+    "name": "Room 13",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 30,
+    "branch_id": 2,
+    "name": "Room 14",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 31,
+    "branch_id": 2,
+    "name": "Room 15",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 32,
+    "branch_id": 2,
+    "name": "Room 16",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 33,
+    "branch_id": 3,
+    "name": "Room 1",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 34,
+    "branch_id": 3,
+    "name": "Room 2",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 35,
+    "branch_id": 3,
+    "name": "Room 3",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 36,
+    "branch_id": 3,
+    "name": "Room 4",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 37,
+    "branch_id": 3,
+    "name": "Room 5",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 38,
+    "branch_id": 3,
+    "name": "Room 6",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 39,
+    "branch_id": 3,
+    "name": "Room 7",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 40,
+    "branch_id": 3,
+    "name": "Room 8",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 41,
+    "branch_id": 3,
+    "name": "Room 9",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 42,
+    "branch_id": 3,
+    "name": "Room 10",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 43,
+    "branch_id": 3,
+    "name": "Room 11",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 44,
+    "branch_id": 3,
+    "name": "Room 12",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 45,
+    "branch_id": 3,
+    "name": "Room 13",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 46,
+    "branch_id": 3,
+    "name": "Room 14",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 47,
+    "branch_id": 3,
+    "name": "Room 15",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 48,
+    "branch_id": 3,
+    "name": "Room 16",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 49,
+    "branch_id": 4,
+    "name": "Room 1",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 50,
+    "branch_id": 4,
+    "name": "Room 2",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 51,
+    "branch_id": 4,
+    "name": "Room 3",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 52,
+    "branch_id": 4,
+    "name": "Room 4",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 53,
+    "branch_id": 4,
+    "name": "Room 5",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 54,
+    "branch_id": 4,
+    "name": "Room 6",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 55,
+    "branch_id": 4,
+    "name": "Room 7",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 56,
+    "branch_id": 4,
+    "name": "Room 8",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 57,
+    "branch_id": 4,
+    "name": "Room 9",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 58,
+    "branch_id": 4,
+    "name": "Room 10",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 59,
+    "branch_id": 4,
+    "name": "Room 11",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 60,
+    "branch_id": 4,
+    "name": "Room 12",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 61,
+    "branch_id": 4,
+    "name": "Room 13",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 62,
+    "branch_id": 4,
+    "name": "Room 14",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 63,
+    "branch_id": 4,
+    "name": "Room 15",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 64,
+    "branch_id": 4,
+    "name": "Room 16",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 65,
+    "branch_id": 5,
+    "name": "Room 1",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 66,
+    "branch_id": 5,
+    "name": "Room 2",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 67,
+    "branch_id": 5,
+    "name": "Room 3",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 68,
+    "branch_id": 5,
+    "name": "Room 4",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 69,
+    "branch_id": 5,
+    "name": "Room 5",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 70,
+    "branch_id": 5,
+    "name": "Room 6",
+    "capacity": 170,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 71,
+    "branch_id": 5,
+    "name": "Room 7",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 72,
+    "branch_id": 5,
+    "name": "Room 8",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 73,
+    "branch_id": 5,
+    "name": "Room 9",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 74,
+    "branch_id": 5,
+    "name": "Room 10",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 75,
+    "branch_id": 5,
+    "name": "Room 11",
+    "capacity": 180,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 76,
+    "branch_id": 5,
+    "name": "Room 12",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "3D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 77,
+    "branch_id": 5,
+    "name": "Room 13",
+    "capacity": 160,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 78,
+    "branch_id": 5,
+    "name": "Room 14",
+    "capacity": 80,
+    "room_type": "vip",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 79,
+    "branch_id": 5,
+    "name": "Room 15",
+    "capacity": 250,
+    "room_type": "imax",
+    "screen_type": "IMAX",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  },
+  {
+    "id": 80,
+    "branch_id": 5,
+    "name": "Room 16",
+    "capacity": 150,
+    "room_type": "standard",
+    "screen_type": "2D",
+    "created_at": "2026-09-19T19:05:45.962Z"
+  }
+]
