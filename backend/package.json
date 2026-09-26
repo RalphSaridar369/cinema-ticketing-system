@@ -13,6 +13,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "write-to-json:user-movie-interaction": "npx tsx src/scripts/write_to_json/write_user_movie_interactions_into_json.ts",
+    "write-to-json:movie-ratings": "npx tsx src/scripts/write_to_json/write_movie_ratings_into_json.ts",
     "write-to-json:tickets": "npx tsx src/scripts/write_to_json/write_tickets_into_json.ts",
     "write-to-json:seats": "npx tsx src/scripts/write_to_json/write_seats_into_json.ts",
     "write-to-json:reservations": "npx tsx src/scripts/write_to_json/write_reservations_into_json.ts",
