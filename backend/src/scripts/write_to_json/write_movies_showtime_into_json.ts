@@ -1,7 +1,8 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 
 interface Movie {
-  id: number;
+  id: string;
   title: string;
   genre_ids: number[];
   vote_average: number;
@@ -9,8 +10,8 @@ interface Movie {
 }
 
 interface Room {
-  id: number;
-  branch_id: number;
+  id: string;
+  branch_id: string;
   name: string;
   capacity: number;
   room_type: "standard" | "vip" | "imax";
@@ -19,9 +20,9 @@ interface Room {
 }
 
 interface Showtime {
-  id: number;
-  movie_id: number;
-  room_id: number;
+  id: string;
+  movie_id: string;
+  room_id: string;
   starts_at: string;
   ends_at: string;
   price: number;
@@ -29,8 +30,8 @@ interface Showtime {
 }
 
 interface ScheduledShowtime {
-  movie_id: number;
-  room_id: number;
+  movie_id: string;
+  room_id: string;
   starts_at: Date;
   ends_at: Date;
 }
@@ -157,8 +158,8 @@ function hasConflict(
 }
 
 function movieAlreadyScheduledTooManyTimes(
-  movieId: number,
-  roomId: number,
+  movieId: string,
+  roomId: string,
   date: string,
   schedule: ScheduledShowtime[]
 ): boolean {
@@ -328,7 +329,7 @@ async function generateShowtimes(): Promise<Showtime[]> {
   const showtimes: Showtime[] = schedule
     .sort((a, b) => a.starts_at.getTime() - b.starts_at.getTime())
     .map((showtime) => ({
-      id: showtimeId++,
+      id: randomUUID(),
       movie_id: showtime.movie_id,
       room_id: showtime.room_id,
       starts_at: showtime.starts_at.toISOString(),

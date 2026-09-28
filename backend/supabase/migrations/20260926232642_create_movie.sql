@@ -1,5 +1,5 @@
 create table movie (
-    id bigint primary key,
+    id uuid primary key,
 
     title text not null,
     original_title text,

@@ -1,4 +1,4 @@
 create table genre (
-    id bigint primary key,
+    id integer primary key,
     name text not null unique
 );

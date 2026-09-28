@@ -1,7 +1,8 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 
 interface User {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -19,7 +20,7 @@ interface Movie {
   adult: boolean;
   backdrop_path: string | null;
   genre_ids: number[];
-  id: number;
+  id: string;
   title: string;
   original_language: string;
   original_title: string;
@@ -37,13 +38,12 @@ type InteractionType =
   | "view"
   | "click"
   | "favorite"
-  | "watch"
-  | "skip";
+  | "watchlist";
 
 interface UserMovieInteraction {
-  id: number;
-  user_id: number;
-  movie_id: number;
+  id: string;
+  user_id: string;
+  movie_id: string;
   interaction_type: InteractionType;
   created_at: string;
 }
@@ -70,10 +70,9 @@ function weightedInteractionType(): InteractionType {
 
   if (random < 0.50) return "view";
   if (random < 0.70) return "click";
-  if (random < 0.82) return "watch";
-  if (random < 0.92) return "favorite";
+  if (random < 0.82) return "watchlist";
+  return "favorite";
 
-  return "skip";
 }
 
 function getInteractionCount(): number {
@@ -176,7 +175,7 @@ async function generateUserMovieInteractions() {
       );
 
       interactions.push({
-        id: nextInteractionId++,
+        id: randomUUID(),
         user_id: user.id,
         movie_id: movie.id,
         interaction_type: interactionType,

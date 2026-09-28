@@ -1,8 +1,9 @@
 import fs from "fs/promises";
 import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 
 interface User {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -236,7 +237,7 @@ async function generateUsers(): Promise<User[]> {
     const isActive = Math.random() < 0.95;
 
     users.push({
-      id,
+      id:randomUUID(),
       first_name: firstName,
       last_name: lastName,
       phone: generateLebanesePhone(

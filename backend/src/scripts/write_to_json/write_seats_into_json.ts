@@ -1,8 +1,9 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 
 interface Room {
-  id: number;
-  branch_id: number;
+  id: string;
+  branch_id: string;
   name: string;
   capacity: number;
   room_type: "standard" | "vip" | "imax";
@@ -10,8 +11,8 @@ interface Room {
 }
 
 interface Seat {
-  id: number;
-  room_id: number;
+  id: string;
+  room_id: string;
   row_label: string;
   seat_number: number;
   seat_type: "standard" | "vip";
@@ -69,7 +70,7 @@ function generateSeatsForRoom(
       seatNumber++
     ) {
       seats.push({
-        id: seatId,
+        id: randomUUID(),
         room_id: room.id,
         row_label: rowLabel,
         seat_number: seatNumber,

@@ -1,10 +1,10 @@
 create table reservation (
-    id bigint primary key,
+    id uuid primary key,
 
-    user_id bigint not null
-        references app_user(id) on delete cascade,
+    user_id uuid not null
+        references auth.users(id) on delete cascade,
 
-    showtime_id bigint not null
+    showtime_id uuid not null
         references showtime(id) on delete cascade,
 
     reserved_at timestamptz not null,

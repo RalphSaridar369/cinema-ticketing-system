@@ -1,7 +1,8 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 
 interface User {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -19,7 +20,7 @@ interface Movie {
   adult: boolean;
   backdrop_path: string | null;
   genre_ids: number[];
-  id: number;
+  id: string;
   title: string;
   original_language: string;
   original_title: string;
@@ -34,9 +35,9 @@ interface Movie {
 }
 
 interface MovieRating {
-  id: number;
-  user_id: number;
-  movie_id: number;
+  id: string;
+  user_id: string;
+  movie_id: string;
   rating: number;
   created_at: string;
 }
@@ -212,7 +213,7 @@ async function generateMovieRatings() {
 
     for (const movie of selectedMovies) {
       ratings.push({
-        id: nextRatingId++,
+        id: randomUUID(),
         user_id: user.id,
         movie_id: movie.id,
         rating: calculateRating(movie),

@@ -1,7 +1,8 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 
 interface Branch {
-  id: number;
+  id: string;
   name: string;
   address: string;
   city: string;
@@ -12,8 +13,8 @@ interface Branch {
 }
 
 interface Room {
-  id: number;
-  branch_id: number;
+  id: string;
+  branch_id: string;
   name: string;
   capacity: number;
   room_type: "standard" | "vip" | "imax";
@@ -29,7 +30,7 @@ async function generateCinemaData(): Promise<{
 
   const branches: Branch[] = [
     {
-      id: 1,
+      id:randomUUID(),
       name: "CineMax Downtown",
       address: "Downtown Beirut",
       city: "Beirut",
@@ -39,7 +40,7 @@ async function generateCinemaData(): Promise<{
       created_at: createdAt,
     },
     {
-      id: 2,
+      id:randomUUID(),
       name: "CineMax Achrafieh",
       address: "Achrafieh",
       city: "Beirut",
@@ -49,7 +50,7 @@ async function generateCinemaData(): Promise<{
       created_at: createdAt,
     },
     {
-      id: 3,
+      id:randomUUID(),
       name: "CineMax Hamra",
       address: "Hamra",
       city: "Beirut",
@@ -59,7 +60,7 @@ async function generateCinemaData(): Promise<{
       created_at: createdAt,
     },
     {
-      id: 4,
+      id:randomUUID(),
       name: "CineMax Jounieh",
       address: "Jounieh",
       city: "Jounieh",
@@ -69,7 +70,7 @@ async function generateCinemaData(): Promise<{
       created_at: createdAt,
     },
     {
-      id: 5,
+      id:randomUUID(),
       name: "CineMax Tripoli",
       address: "Tripoli",
       city: "Tripoli",
@@ -116,7 +117,7 @@ async function generateCinemaData(): Promise<{
       }
 
       rooms.push({
-        id: (branch.id - 1) * 16 + roomNumber,
+        id: randomUUID(),
         branch_id: branch.id,
         name: `Room ${roomNumber}`,
         capacity,

@@ -1,5 +1,5 @@
 create table branch (
-    id bigint primary key,
+    id uuid primary key,
     name text not null,
     address text not null,
     city text not null,

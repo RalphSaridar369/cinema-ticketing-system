@@ -1,52 +1,52 @@
 [
   {
-    "id": 1,
+    "id": "76970813-64bb-4580-8280-89029b1c0322",
     "name": "CineMax Downtown",
     "address": "Downtown Beirut",
     "city": "Beirut",
     "latitude": 33.8959,
     "longitude": 35.4784,
     "phone": "+961 1 100 001",
-    "created_at": "2026-09-19T19:05:45.962Z"
+    "created_at": "2026-09-28T16:35:47.515Z"
   },
   {
-    "id": 2,
+    "id": "44c5d6d3-dc5e-4af3-9c65-4ea4de0cbd46",
     "name": "CineMax Achrafieh",
     "address": "Achrafieh",
     "city": "Beirut",
     "latitude": 33.8894,
     "longitude": 35.516,
     "phone": "+961 1 100 002",
-    "created_at": "2026-09-19T19:05:45.962Z"
+    "created_at": "2026-09-28T16:35:47.515Z"
   },
   {
-    "id": 3,
+    "id": "e473d887-d80f-4ff8-a994-a283eab62639",
     "name": "CineMax Hamra",
     "address": "Hamra",
     "city": "Beirut",
     "latitude": 33.895,
     "longitude": 35.484,
     "phone": "+961 1 100 003",
-    "created_at": "2026-09-19T19:05:45.962Z"
+    "created_at": "2026-09-28T16:35:47.515Z"
   },
   {
-    "id": 4,
+    "id": "7b73668e-3e7b-4459-a1f2-ec49b9f0f5dc",
     "name": "CineMax Jounieh",
     "address": "Jounieh",
     "city": "Jounieh",
     "latitude": 33.9808,
     "longitude": 35.6178,
     "phone": "+961 9 100 004",
-    "created_at": "2026-09-19T19:05:45.962Z"
+    "created_at": "2026-09-28T16:35:47.515Z"
   },
   {
-    "id": 5,
+    "id": "4f0222cd-9b95-47da-a156-d5eab7f3b910",
     "name": "CineMax Tripoli",
     "address": "Tripoli",
     "city": "Tripoli",
     "latitude": 34.4367,
     "longitude": 35.8497,
     "phone": "+961 6 100 005",
-    "created_at": "2026-09-19T19:05:45.962Z"
+    "created_at": "2026-09-28T16:35:47.515Z"
   }
 ]

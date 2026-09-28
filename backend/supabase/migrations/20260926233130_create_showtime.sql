@@ -1,10 +1,10 @@
 create table showtime (
-    id bigint primary key,
+    id uuid primary key,
 
-    movie_id bigint not null
+    movie_id uuid not null
         references movie(id) on delete cascade,
 
-    room_id bigint not null
+    room_id uuid not null
         references room(id) on delete cascade,
 
     starts_at timestamptz not null,

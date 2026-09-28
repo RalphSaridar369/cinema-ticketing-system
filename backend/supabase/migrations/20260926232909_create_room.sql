@@ -1,6 +1,6 @@
 create table room (
-    id bigint primary key,
-    branch_id bigint not null references branch(id) on delete cascade,
+    id uuid primary key,
+    branch_id uuid not null references branch(id) on delete cascade,
 
     name text not null,
     capacity integer not null check (capacity > 0),

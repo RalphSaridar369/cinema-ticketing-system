@@ -1,17 +1,18 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 
 interface Seat {
-  id: number;
-  room_id: number;
+  id: string;
+  room_id: string;
   row_label: string;
   seat_number: number;
   seat_type: "standard" | "vip";
 }
 
 interface Showtime {
-  id: number;
-  movie_id: number;
-  room_id: number;
+  id: string;
+  movie_id: string;
+  room_id: string;
   starts_at: string;
   ends_at: string;
   price: number;
@@ -19,9 +20,9 @@ interface Showtime {
 }
 
 interface Reservation {
-  id: number;
-  user_id: number;
-  showtime_id: number;
+  id: string;
+  user_id: string;
+  showtime_id: string;
   reserved_at: string;
   party_size: number;
   status: "confirmed" | "completed" | "cancelled";
@@ -30,10 +31,10 @@ interface Reservation {
 }
 
 interface Ticket {
-  id: number;
-  reservation_id: number;
-  showtime_id: number;
-  seat_id: number;
+  id: string;
+  reservation_id: string;
+  showtime_id: string;
+  seat_id: string;
   price: number;
   status: "confirmed" | "used" | "cancelled";
   created_at: string;
@@ -215,7 +216,7 @@ async function generateTickets() {
   );
 
   const showtimeMap = new Map<
-    number,
+    string,
     Showtime
   >();
 
@@ -227,7 +228,7 @@ async function generateTickets() {
   }
 
   const seatsByRoom = new Map<
-    number,
+    string,
     Seat[]
   >();
 
@@ -306,7 +307,7 @@ async function generateTickets() {
 
       for (const seat of randomSeats) {
         tickets.push({
-          id: tickets.length + 1,
+          id: randomUUID(),
           reservation_id:
             reservation.id,
           showtime_id:
@@ -359,7 +360,7 @@ async function generateTickets() {
       bookedSeats.add(key);
 
       tickets.push({
-        id: tickets.length + 1,
+        id: randomUUID(),
 
         reservation_id:
           reservation.id,

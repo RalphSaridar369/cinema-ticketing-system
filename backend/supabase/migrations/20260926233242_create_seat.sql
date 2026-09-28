@@ -1,7 +1,7 @@
 create table seat (
-    id bigint primary key,
+    id uuid primary key,
 
-    room_id bigint not null
+    room_id uuid not null
         references room(id) on delete cascade,
 
     row_label text not null,

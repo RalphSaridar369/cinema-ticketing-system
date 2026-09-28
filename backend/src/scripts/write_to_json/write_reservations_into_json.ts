@@ -1,7 +1,8 @@
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 
 interface User {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -16,9 +17,9 @@ interface User {
 }
 
 interface Showtime {
-  id: number;
-  movie_id: number;
-  room_id: number;
+  id: string;
+  movie_id: string;
+  room_id: string;
   starts_at: string;
   ends_at: string;
   price: number;
@@ -26,8 +27,8 @@ interface Showtime {
 }
 
 interface Room {
-  id: number;
-  branch_id: number;
+  id: string;
+  branch_id: string;
   name: string;
   capacity: number;
   room_type: "standard" | "vip" | "imax";
@@ -35,9 +36,9 @@ interface Room {
 }
 
 interface Reservation {
-  id: number;
-  user_id: number;
-  showtime_id: number;
+  id: string;
+  user_id: string;
+  showtime_id: string;
   reserved_at: string;
   party_size: number;
   status: "confirmed" | "completed" | "cancelled";
@@ -150,7 +151,7 @@ async function generateReservations() {
     throw new Error("No showtimes found.");
   }
 
-  const roomMap = new Map<number, Room>();
+  const roomMap = new Map<string, Room>();
 
   for (const room of rooms) {
     roomMap.set(room.id, room);
@@ -253,7 +254,7 @@ async function generateReservations() {
     const totalAmount = partySize * showtime.price;
 
     const reservation: Reservation = {
-      id: reservations.length + 1,
+      id: randomUUID(),
       user_id: user.id,
       showtime_id: showtime.id,
       reserved_at: reservedAt.toISOString(),
@@ -280,7 +281,7 @@ async function generateReservations() {
   );
 
   reservations.forEach((reservation, index) => {
-    reservation.id = index + 1;
+    reservation.id = randomUUID();
   });
 
   await fs.writeFile(

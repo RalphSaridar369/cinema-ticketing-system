@@ -6,14 +6,14 @@ interface Genre {
 }
 
 interface Movie {
-  id: number;
+  id: string;
   genre_ids: number[];
 }
 
 interface GenreMovies {
   id: number;
   name: string;
-  movieIds: number[];
+  movieIds: string[];
 }
 
 async function mapGenresToMovies(): Promise<void> {

@@ -1,10 +1,11 @@
 import fs from "fs/promises";
 import "dotenv/config";
+import { randomUUID } from "crypto";
 
 const API_TOKEN = process.env.TMDB_API_TOKEN;
 
 interface TMDBMovie {
-  id: number;
+  id: string;
   title: string;
   overview: string;
   release_date: string;
@@ -56,8 +57,8 @@ async function fetchMovies(
     }
 
     const data: TMDBResponse = await response.json();
-
-    movies.push(...data.results);
+    let results = data.results.map((item)=>({...item,id:randomUUID()}))
+    movies.push(...results);
   }
 
   // In case numberOfMovies isn't a multiple of 20

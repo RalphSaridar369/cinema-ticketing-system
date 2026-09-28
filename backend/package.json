@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "bcrypt": "^6.0.0",
     "dotenv": "^18.0.1"
   },
@@ -13,6 +14,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "seed-to-db:users": "npx tsx src/scripts/seed_to_db/write_users_to_db.ts",
+    "seed-to-db:branches": "npx tsx src/scripts/seed_to_db/write_branches_to_db.ts",
+    "seed-to-db:rooms": "npx tsx src/scripts/seed_to_db/write_rooms_to_db.ts",
+    "seed-to-db:seats": "npx tsx src/scripts/seed_to_db/write_seats_to_db.ts",
+    "seed-to-db:movies": "npx tsx src/scripts/seed_to_db/write_movies_to_db.ts",
+    "seed-to-db:genres": "npx tsx src/scripts/seed_to_db/write_genres_to_db.ts",
+    "seed-to-db:movies-genres": "npx tsx src/scripts/seed_to_db/write_movies_genres_to_db.ts",
+    "seed-to-db:showtimes": "npx tsx src/scripts/seed_to_db/write_showtimes_to_db.ts",
+    "seed-to-db:reservations": "npx tsx src/scripts/seed_to_db/write_reservations_to_db.ts",
+    "seed-to-db:tickets": "npx tsx src/scripts/seed_to_db/write_tickets_to_db.ts",
+    "seed-to-db:user_movie_interaction": "npx tsx src/scripts/seed_to_db/write_to_user_movie_interaction_to_db.ts",
+
+    "seed-to-db:all": "npm run seed-to-db:users && npm run seed-to-db:branches && npm run seed-to-db:rooms && npm run seed-to-db:seats && npm run seed-to-db:movies && npm run seed-to-db:genres && npm run seed-to-db:movies-genres && npm run seed-to-db:showtimes && npm run seed-to-db:reservations && npm run seed-to-db:tickets && npm run seed-to-db:user_movie_interaction",
+
     "write-to-json:user-movie-interaction": "npx tsx src/scripts/write_to_json/write_user_movie_interactions_into_json.ts",
     "write-to-json:movie-ratings": "npx tsx src/scripts/write_to_json/write_movie_ratings_into_json.ts",
     "write-to-json:tickets": "npx tsx src/scripts/write_to_json/write_tickets_into_json.ts",
@@ -24,6 +39,8 @@
     "write-to-json:movies": "npx tsx src/scripts/write_to_json/write_movies_into_json.ts",
     "write-to-json:genres-movies": "npx tsx src/scripts/write_to_json/write_genres_movies_into_json.ts",
     "write-to-json:genres": "npx tsx src/scripts/write_to_json/write_genres_into_json.ts",
+    
+    "write-to-json:all": "npm run write-to-json:users && npm run write-to-json:branches-and-rooms && npm run write-to-json:seats && npm run write-to-json:movies && npm run write-to-json:genres && npm run write-to-json:genres-movies && npm run write-to-json:movies-showtime && npm run write-to-json:reservations && npm run write-to-json:tickets && npm run write-to-json:movie-ratings && npm run write-to-json:user-movie-interaction",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
