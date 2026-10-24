@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { BRANCHES } from "@/lib/data";
 import { useAppState, type AppState } from "@/lib/store";
 import { RequireAuth } from "./auth-gate";
+import { BranchPill } from "./branch-picker";
 import { Spinner, Wordmark } from "./ui";
 
 type Tab = "Home" | "Book" | "My Tickets" | "Profile";
@@ -28,21 +29,6 @@ function tabs(s: AppState): [Tab, string][] {
     ["My Tickets", "/my-tickets"],
     ["Profile", "/profile"],
   ];
-}
-
-export function BranchPill({ s, compact }: { s: AppState; compact?: boolean }) {
-  const label = s.branch != null ? BRANCHES[s.branch].name : "All branches";
-  return (
-    <Link
-      href="/branches"
-      className={`card flex items-center rounded-full ${compact ? "h-[38px] gap-2 px-3.5 text-[13px]" : "h-[42px] gap-2.5 px-4 text-sm"}`}
-    >
-      <span className="h-2 w-2 rounded-full bg-gold" />
-      {!compact && <span className="text-mu">Branch</span>}
-      <strong>{label}</strong>
-      <span className="text-mu">▾</span>
-    </Link>
-  );
 }
 
 function DesktopNav({ s, tab }: { s: AppState; tab: Tab | null }) {

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BranchPill, useApp } from "@/components/app-shell";
+import { useApp } from "@/components/app-shell";
+import { BranchPill } from "@/components/branch-picker";
 import { FeatureCard, PosterCard } from "@/components/movie-cards";
 import { EmptyState, Wordmark } from "@/components/ui";
 import { BRANCHES, GENRES, MOVIES, POPULAR, RECOMMENDED, plays } from "@/lib/data";
