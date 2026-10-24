@@ -1,0 +1,208 @@
+"use client";
+
+import Link from "next/link";
+import { use, useState } from "react";
+import { useApp } from "@/components/app-shell";
+import { BackLink, NotFoundNote } from "@/components/ui";
+import {
+  BRANCHES,
+  MAX_SEATS,
+  MOVIES,
+  ROW_LETTERS,
+  getDays,
+  isVipSeat,
+  money,
+  seatSort,
+  showtimeById,
+  unavailableSeats,
+  ticketCount,
+  type Showtime,
+} from "@/lib/data";
+import { say } from "@/lib/store";
+
+export function SeatSelection({ params }: { params: Promise<{ showtime: string }> }) {
+  const s = useApp();
+  const { showtime } = use(params);
+  const st = showtimeById(showtime);
+  if (!st || st.soldOut) return <NotFoundNote title="This showtime isn’t available" href="/branches" cta="Pick another showtime" />;
+  return <SeatPicker key={st.id} st={st} taken={unavailableSeats(st, s.bookings)} />;
+}
+
+function SeatPicker({ st, taken }: { st: Showtime; taken: Set<string> }) {
+  const [sel, setSel] = useState<string[]>([]);
+  const [zoom, setZoom] = useState(1);
+  const free = st.room.rows * 10 - taken.size;
+  const m = MOVIES[st.movie];
+  const sorted = seatSort(sel);
+  const n = sel.length;
+  const total = money(st.room.price * n);
+  const label = n ? sorted.join(", ") : "No seats selected";
+  const checkoutHref = `/book/${st.id}/checkout?seats=${sorted.join(",")}`;
+
+  const tap = (id: string) =>
+    setSel((s) => {
+      if (s.includes(id)) return s.filter((x) => x !== id);
+      if (s.length >= MAX_SEATS) {
+        say(`Up to ${MAX_SEATS} seats per booking`);
+        return s;
+      }
+      return [...s, id];
+    });
+
+  return (
+    <>
+      <div className="px-page flex items-center gap-3.5 border-b border-line pb-3 pt-3.5">
+        <BackLink href={`/movies/${m.slug}`}>
+          <span className="card flex h-10 w-10 items-center justify-center rounded-full text-tx" aria-label="Back">
+            ←
+          </span>
+        </BackLink>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="font-display text-[clamp(17px,1.7vw,24px)] font-semibold">{m.title}</h1>
+          <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-mu">
+            <span>
+              {BRANCHES[st.branch].name} · {st.room.name}
+            </span>
+            <span className="tag text-gold-ink">{st.room.format}</span>
+            <span>
+              {getDays()[st.day].label} · {st.start}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-8 px-[max(12px,calc((100%-1240px)/2))] pt-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-3.5">
+          {free > 0 && free <= 12 && (
+            <div className="mx-2 rounded-xl border border-err bg-s1 px-3.5 py-[11px] text-[13.5px] font-bold text-err">
+              Almost full · only {free} seats left for this showtime
+            </div>
+          )}
+
+          <div className="relative">
+            <div className="card mx-2 h-[452px] overflow-auto rounded-2xl pt-[52px] md:mx-0 md:h-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:pt-2">
+              <div style={{ zoom }} className="md:[zoom:1]!">
+                <SeatMap st={st} taken={taken} sel={sel} onTap={tap} />
+              </div>
+            </div>
+            <div className="absolute right-2.5 top-2.5 flex flex-col overflow-hidden rounded-xl border border-line bg-s1 shadow-[0_6px_18px_rgba(0,0,0,.25)] md:hidden">
+              <button aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(2, z + 0.25))} className="flex h-11 w-11 items-center justify-center border-b border-line text-xl">
+                +
+              </button>
+              <button aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))} className="flex h-11 w-11 items-center justify-center text-xl">
+                −
+              </button>
+            </div>
+            <span className="absolute left-2.5 top-2.5 rounded-md border border-line bg-s1 px-2 py-1 font-mono text-[10px] font-medium text-mu md:hidden">
+              {Math.round(zoom * 100)}% · drag to pan
+            </span>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4 px-2 pb-4 pt-1 text-xs text-mu">
+            <Legend swatch="bg-s2 border border-line">Available</Legend>
+            <Legend swatch="bg-s3 opacity-45">Taken</Legend>
+            <Legend swatch="bg-gold">Selected</Legend>
+            <Legend swatch="border-[1.5px] border-gold-ink">VIP seat</Legend>
+          </div>
+        </div>
+
+        <aside className="card sticky top-[88px] hidden w-[340px] flex-none flex-col gap-3.5 rounded-[20px] p-[22px] md:flex">
+          <span className="font-mono text-[11px] font-medium tracking-[.1em] text-mu">YOUR SEATS</span>
+          <span className="font-display text-2xl font-semibold text-gold-ink">{label}</span>
+          <Line k="Tickets" v={String(n)} />
+          <Line k="Price per seat" v={money(st.room.price)} />
+          <div className="flex justify-between border-t border-line pt-3 text-lg font-extrabold">
+            <span>Total</span>
+            <span>{total}</span>
+          </div>
+          <ContinueButton href={n ? checkoutHref : null} label={n ? "Continue" : "Select seats"} className="h-[54px] text-base" />
+          <span className="text-xs text-mu">Up to {MAX_SEATS} seats per booking.</span>
+        </aside>
+      </div>
+
+      <div className="sticky bottom-[76px] mt-2 flex items-center gap-3.5 border-t border-line bg-s1 px-5 py-3.5 md:hidden">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="truncate text-base font-extrabold text-gold-ink">{label}</span>
+          <span className="text-[12.5px] text-mu">
+            {ticketCount(n)} · {money(st.room.price)} × {n} = {total}
+          </span>
+        </div>
+        <ContinueButton href={n ? checkoutHref : null} label="Continue" className="h-[50px] px-6 text-[15px]" />
+      </div>
+    </>
+  );
+}
+
+function SeatMap({ st, taken, sel, onTap }: { st: Showtime; taken: Set<string>; sel: string[]; onTap: (id: string) => void }) {
+  const rows = Array.from({ length: st.room.rows }, (_, r) => r);
+  const seat = (r: number, i: number) => {
+    const id = ROW_LETTERS[r] + i;
+    const base = "flex h-[calc(var(--seat)*.88)] w-[var(--seat)] items-center justify-center rounded-[7px_7px_4px_4px]";
+    if (taken.has(id))
+      return (
+        <div key={i} aria-label={`${id}, taken`} className={`${base} bg-s3 text-[10px] text-mu opacity-45`}>
+          ×
+        </div>
+      );
+    const selected = sel.includes(id);
+    const vip = isVipSeat(st, r, i);
+    const look = selected
+      ? "bg-gold text-on-gold text-[10px] font-extrabold"
+      : vip
+        ? "border-[1.5px] border-gold-ink text-gold-ink text-[9.5px]"
+        : "bg-s2 border border-line text-mu text-[9.5px] hover:border-gold";
+    return (
+      <button key={i} title={id} aria-label={`${id}${vip ? ", VIP" : ""}`} aria-pressed={selected} onClick={() => onTap(id)} className={`${base} ${look}`}>
+        {i}
+      </button>
+    );
+  };
+
+  return (
+    <div className="mx-auto flex w-max flex-col items-center gap-1.5 px-2 pb-5 pt-2 [--seat:clamp(25px,2.4vw,34px)]">
+      <div className="h-[22px] w-[calc(var(--seat)*10.5)] rounded-[50%_50%_0_0/100%_100%_0_0] border-t-[3px] border-gold shadow-[0_-10px_24px_-12px_var(--gold)]" />
+      <span className="-mt-2.5 mb-3 font-mono text-[10px] font-medium tracking-[.3em] text-mu">SCREEN</span>
+      {rows.map((r) => (
+        <div key={r} className="flex items-center gap-[calc(var(--seat)*.18)]">
+          <span className="w-4 font-mono text-[11px] font-medium text-mu">{ROW_LETTERS[r]}</span>
+          {[1, 2, 3, 4, 5].map((i) => seat(r, i))}
+          <span className="w-[calc(var(--seat)*.7)]" />
+          {[6, 7, 8, 9, 10].map((i) => seat(r, i))}
+          <span className="w-4 text-right font-mono text-[11px] font-medium text-mu">{ROW_LETTERS[r]}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ContinueButton({ href, label, className }: { href: string | null; label: string; className: string }) {
+  if (!href)
+    return (
+      <button disabled className={`btn btn-gold ${className}`}>
+        {label}
+      </button>
+    );
+  return (
+    <Link href={href} className={`btn btn-gold ${className}`}>
+      {label}
+    </Link>
+  );
+}
+
+function Legend({ swatch, children }: { swatch: string; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={`h-3.5 w-4 rounded ${swatch}`} />
+      {children}
+    </span>
+  );
+}
+
+function Line({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between text-sm text-mu">
+      <span>{k}</span>
+      <strong className="text-tx">{v}</strong>
+    </div>
+  );
+}

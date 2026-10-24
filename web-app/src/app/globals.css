@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* Velour palette. Dark is the default; light is opt-in from the profile page. */
+:root,
+[data-theme="dark"] {
+  --bg: #0e0d0b;
+  --s1: #171512;
+  --s2: #211e19;
+  --s3: #2d2922;
+  --line: rgba(255, 236, 200, 0.1);
+  --tx: #f3eee5;
+  --mu: #a69e90;
+  --gold: #d9b36c;
+  --gold-ink: #e2c07f;
+  --on-gold: #1a1306;
+  --err: #f08a7e;
+  --scrim: rgba(0, 0, 0, 0.62);
+}
+
+[data-theme="light"] {
+  --bg: #f5f1ea;
+  --s1: #ffffff;
+  --s2: #ebe5da;
+  --s3: #d6ccbb;
+  --line: rgba(40, 28, 8, 0.13);
+  --tx: #1a1610;
+  --mu: #675f50;
+  --gold: #cfa250;
+  --gold-ink: #86610f;
+  --on-gold: #1a1306;
+  --err: #b23a2c;
+  --scrim: rgba(20, 14, 4, 0.45);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-s1: var(--s1);
+  --color-s2: var(--s2);
+  --color-s3: var(--s3);
+  --color-line: var(--line);
+  --color-tx: var(--tx);
+  --color-mu: var(--mu);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
+  --color-on-gold: var(--on-gold);
+  --color-err: var(--err);
+  --color-scrim: var(--scrim);
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-display: var(--font-sora), sans-serif;
+  --font-mono: var(--font-dm-mono), monospace;
+  --animate-spin-fast: spin 0.8s linear infinite;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  body {
+    background: var(--bg);
+    color: var(--tx);
+  }
+  input,
+  select,
+  button,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  input::placeholder {
+    color: var(--mu);
+    opacity: 0.7;
+  }
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Horizontal padding that keeps content in a 1240px column but lets
+     scrolling rows bleed to the screen edge. */
+  .px-page {
+    padding-inline: max(20px, calc((100% - 1240px) / 2));
+  }
+  /* Keeps snapped cards aligned with the padded edge instead of the screen edge. */
+  .scroll-px-page {
+    scroll-padding-inline: max(20px, calc((100% - 1240px) / 2));
+  }
+  .px-page-narrow {
+    padding-inline: max(20px, calc((100% - 1040px) / 2));
+  }
+
+  .poster {
+    background: repeating-linear-gradient(135deg, var(--s2) 0 10px, var(--s1) 10px 11px);
+  }
+  .poster-deep {
+    background: repeating-linear-gradient(135deg, var(--s2) 0 8px, var(--bg) 8px 9px);
+  }
+  .backdrop {
+    background: repeating-linear-gradient(135deg, var(--s2) 0 14px, var(--s1) 14px 15px);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-radius: 14px;
+    font-weight: 800;
+    transition: filter 0.15s, border-color 0.15s;
+  }
+  .btn-gold {
+    background: var(--gold);
+    color: var(--on-gold);
+  }
+  .btn-gold:hover:not(:disabled) {
+    filter: brightness(1.07);
+  }
+  .btn-gold:disabled {
+    background: var(--s3);
+    color: var(--mu);
+  }
+  .btn-outline {
+    border: 1px solid var(--gold);
+    color: var(--gold-ink);
+    font-weight: 700;
+  }
+  .btn-soft {
+    background: var(--s1);
+    border: 1px solid var(--line);
+    font-weight: 700;
+  }
+
+  .field {
+    height: 52px;
+    border-radius: 12px;
+    background: var(--s1);
+    border: 1px solid var(--line);
+    padding: 0 16px;
+    font-size: 15px;
+    outline: none;
+    min-width: 0;
+    width: 100%;
+  }
+  .field:focus {
+    border-color: var(--gold);
+  }
+  .field[aria-invalid="true"] {
+    border: 1.5px solid var(--err);
+  }
+
+  .card {
+    background: var(--s1);
+    border: 1px solid var(--line);
+  }
+  .card-link {
+    transition: border-color 0.15s;
+  }
+  .card-link:hover {
+    border-color: var(--gold);
+  }
+
+  .tag {
+    font-family: var(--font-dm-mono), monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
