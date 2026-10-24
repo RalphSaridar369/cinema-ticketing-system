@@ -16,7 +16,7 @@ create table ticket (
     status text not null
         check (status in ('confirmed', 'used', 'cancelled')),
 
-    created_at timestamptz not null default now(),
+    created_at timestamptz not null default now()
 );
 
 create unique index ticket_showtime_id_seat_id_active_key

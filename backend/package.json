@@ -25,8 +25,9 @@
     "seed-to-db:reservations": "npx tsx src/scripts/seed_to_db/write_reservations_to_db.ts",
     "seed-to-db:tickets": "npx tsx src/scripts/seed_to_db/write_tickets_to_db.ts",
     "seed-to-db:user_movie_interaction": "npx tsx src/scripts/seed_to_db/write_to_user_movie_interaction_to_db.ts",
+    "seed-to-db:movie-ratings": "npx tsx src/scripts/seed_to_db/write_movie_ratings_to_db.ts",
 
-    "seed-to-db:all": "npm run seed-to-db:users && npm run seed-to-db:branches && npm run seed-to-db:rooms && npm run seed-to-db:seats && npm run seed-to-db:movies && npm run seed-to-db:genres && npm run seed-to-db:movies-genres && npm run seed-to-db:showtimes && npm run seed-to-db:reservations && npm run seed-to-db:tickets && npm run seed-to-db:user_movie_interaction",
+    "seed-to-db:all": "npm run seed-to-db:users && npm run seed-to-db:branches && npm run seed-to-db:rooms && npm run seed-to-db:seats && npm run seed-to-db:movies && npm run seed-to-db:genres && npm run seed-to-db:movies-genres && npm run seed-to-db:showtimes && npm run seed-to-db:reservations && npm run seed-to-db:tickets && npm run seed-to-db:user_movie_interaction && npm run seed-to-db:movie-ratings",
 
     "write-to-json:user-movie-interaction": "npx tsx src/scripts/write_to_json/write_user_movie_interactions_into_json.ts",
     "write-to-json:movie-ratings": "npx tsx src/scripts/write_to_json/write_movie_ratings_into_json.ts",
