@@ -66,7 +66,7 @@ export function BranchPill({ s, compact }: { s: AppState; compact?: boolean }) {
             <div key={city} role="group" aria-label={city}>
               <div className="px-3 pb-1 pt-3 font-mono text-[11px] font-medium tracking-[.12em] text-gold-ink">{city.toUpperCase()}</div>
               {BRANCHES.filter((b) => b.city === city).map((b) => (
-                <Option key={b.id} selected={s.branch === b.id} onPick={() => pick(b.id)} title={b.name} sub={b.addr} aside={b.dist} />
+                <Option key={b.id} selected={s.branch === b.id} onPick={() => pick(b.id)} title={b.name} sub={b.addr} />
               ))}
             </div>
           ))}
@@ -76,7 +76,7 @@ export function BranchPill({ s, compact }: { s: AppState; compact?: boolean }) {
   );
 }
 
-function Option({ selected, onPick, title, sub, aside }: { selected: boolean; onPick: () => void; title: string; sub: string; aside?: string }) {
+function Option({ selected, onPick, title, sub }: { selected: boolean; onPick: () => void; title: string; sub: string }) {
   return (
     <button
       role="option"
@@ -89,7 +89,6 @@ function Option({ selected, onPick, title, sub, aside }: { selected: boolean; on
         <span className="text-[15px] font-bold">{title}</span>
         <span className="truncate text-[12.5px] text-mu">{sub}</span>
       </span>
-      {aside && <span className="flex-none text-[12.5px] font-bold text-gold-ink">{aside}</span>}
     </button>
   );
 }

@@ -139,12 +139,9 @@ export function MovieDetails({ movieId }: { movieId: number }) {
           {groups.map(({ b, items }) => (
             <div key={b.id} className="flex flex-col gap-3.5">
               {!branch && (
-                <div className="mt-1.5 flex items-baseline justify-between">
-                  <span className="text-[15px] font-extrabold">
-                    {b.name} <span className="font-medium text-mu">· {b.city}</span>
-                  </span>
-                  <span className="text-[12.5px] font-bold text-gold-ink">{b.dist}</span>
-                </div>
+                <span className="mt-1.5 text-[15px] font-extrabold">
+                  {b.name} <span className="font-medium text-mu">· {b.city}</span>
+                </span>
               )}
               {items.map((st) => (
                 <ShowtimeRow key={st.id} st={st} />

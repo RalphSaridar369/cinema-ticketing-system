@@ -31,19 +31,14 @@ export default function BranchesPage() {
     <div className="px-page flex flex-col gap-4 pb-10 pt-4">
       <BackLink href="/" />
       <PageTitle>Choose a cinema</PageTitle>
-      <div className="flex flex-wrap gap-2.5">
-        <input
-          type="search"
-          aria-label="Search branch or city"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search branch or city"
-          className="field h-[50px] flex-[1_1_240px]"
-        />
-        <button onClick={() => say("Sorted by distance from you")} className="btn btn-outline h-[50px] flex-none rounded-xl px-[18px] text-sm">
-          ◎ Use my location
-        </button>
-      </div>
+      <input
+        type="search"
+        aria-label="Search branch or city"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search branch or city"
+        className="field h-[50px]"
+      />
 
       {!ql && (
         <button onClick={() => pick(null)} className="card card-link flex items-center gap-3.5 rounded-2xl px-[18px] py-4 text-left">
@@ -79,10 +74,7 @@ export default function BranchesPage() {
                   <span className="text-[13.5px] text-mu">{b.addr}</span>
                   <span className="text-[13.5px] text-mu">{b.phone}</span>
                 </div>
-                <div className="flex flex-col items-end justify-between">
-                  <span className="whitespace-nowrap text-sm font-bold text-gold-ink">{b.dist}</span>
-                  <span className="text-lg text-mu">›</span>
-                </div>
+                <span className="self-center text-lg text-mu">›</span>
               </button>
             ))}
           </div>

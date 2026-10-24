@@ -14,15 +14,14 @@ export type Branch = {
   city: City;
   addr: string;
   phone: string;
-  dist: string;
 };
 
 export const BRANCHES: Branch[] = [
-  { id: 0, slug: "hamra", name: "Hamra", city: "Beirut", addr: "Hamra St., Saroulla Bldg", phone: "+961 1 345 678", dist: "1.2 km" },
-  { id: 1, slug: "verdun", name: "Verdun", city: "Beirut", addr: "Rashid Karami St., Verdun 730", phone: "+961 1 789 012", dist: "3.4 km" },
-  { id: 2, slug: "achrafieh", name: "Achrafieh", city: "Beirut", addr: "Sassine Square, Level 2", phone: "+961 1 456 789", dist: "4.1 km" },
-  { id: 3, slug: "kaslik", name: "Kaslik", city: "Jounieh", addr: "Kaslik Main Rd., Marina Center", phone: "+961 9 234 567", dist: "18 km" },
-  { id: 4, slug: "mina", name: "Mina", city: "Tripoli", addr: "Port Rd., El Mina", phone: "+961 6 345 210", dist: "81 km" },
+  { id: 0, slug: "hamra", name: "Hamra", city: "Beirut", addr: "Hamra St., Saroulla Bldg", phone: "+961 1 345 678" },
+  { id: 1, slug: "verdun", name: "Verdun", city: "Beirut", addr: "Rashid Karami St., Verdun 730", phone: "+961 1 789 012" },
+  { id: 2, slug: "achrafieh", name: "Achrafieh", city: "Beirut", addr: "Sassine Square, Level 2", phone: "+961 1 456 789" },
+  { id: 3, slug: "kaslik", name: "Kaslik", city: "Jounieh", addr: "Kaslik Main Rd., Marina Center", phone: "+961 9 234 567" },
+  { id: 4, slug: "mina", name: "Mina", city: "Tripoli", addr: "Port Rd., El Mina", phone: "+961 6 345 210" },
 ];
 
 export type Movie = {
