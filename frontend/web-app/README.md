@@ -5,7 +5,7 @@ Responsive Next.js implementation of the Velour cinema booking prototype (Claude
 ## Run
 
 ```bash
-cd web-app
+cd frontend/web-app
 npm install
 npm run dev      # http://localhost:3000
 npm run build    # production build
