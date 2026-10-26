@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Field, SelectField } from "@/components/ui";
-import { CITIES } from "@/lib/data";
+import { useState } from "react";
+import { CheckCircle, Field, SelectField, Spinner } from "@/components/ui";
+import { CITIES, GENDERS } from "@/lib/data";
 import { actions } from "@/lib/store";
 import { useForm } from "@/lib/use-form";
 import { emailOk, minLength, phoneOk, required } from "@/lib/validation";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const form = useForm({ first: "", last: "", email: "", phone: "", password: "", confirm: "" });
+  const form = useForm({ first: "", last: "", email: "", phone: "", password: "", confirm: "", dob: "", gender: "", city: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const ok = form.check([
       ["first", required, "First name is required"],
@@ -23,10 +27,29 @@ export default function RegisterPage() {
       ["confirm", (v, f) => !!v && v === f.password, "Passwords do not match"],
     ]);
     if (!ok) return;
-    const { first, last, email, phone } = form.values;
-    actions.register({ first: first.trim(), last: last.trim(), email, phone });
-    router.replace("/");
+    const v = form.values;
+    setBusy(true);
+    const res = await actions.register({ ...v, first: v.first.trim(), last: v.last.trim(), email: v.email.trim() });
+    setBusy(false);
+    setError(res.error);
+    if (res.error) return;
+    if (res.confirm) setConfirmSent(true);
+    else router.replace("/");
   };
+
+  if (confirmSent)
+    return (
+      <div className="mt-10 flex flex-col items-center gap-3.5 text-center">
+        <CheckCircle />
+        <h1 className="font-display text-[28px] font-semibold tracking-[-.02em]">Confirm your email</h1>
+        <p className="text-[15px] leading-normal text-mu">
+          We sent a confirmation link to <strong className="text-tx">{form.values.email}</strong>. Open it to finish creating your account.
+        </p>
+        <Link href="/login" className="btn btn-gold mt-3 h-[54px] w-full text-base">
+          Go to log in
+        </Link>
+      </div>
+    );
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-[18px]">
@@ -47,14 +70,16 @@ export default function RegisterPage() {
         <div className="h-px flex-1 bg-line" />
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-3.5">
-        <Field label="Date of birth" type="date" className="px-2.5 text-sm" />
-        <SelectField label="Gender" defaultValue="">
+        <Field label="Date of birth" type="date" className="px-2.5 text-sm" {...form.bind("dob")} />
+        <SelectField label="Gender" name="gender" value={form.values.gender} onChange={form.bind("gender").onChange}>
           <option value="">Select</option>
-          <option>Female</option>
-          <option>Male</option>
-          <option>Prefer not to say</option>
+          {GENDERS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </SelectField>
-        <SelectField label="City" defaultValue="">
+        <SelectField label="City" name="city" value={form.values.city} onChange={form.bind("city").onChange}>
           <option value="">Select</option>
           {CITIES.map((c) => (
             <option key={c}>{c}</option>
@@ -62,8 +87,19 @@ export default function RegisterPage() {
           <option>Other</option>
         </SelectField>
       </div>
-      <button type="submit" className="btn btn-gold mt-1 h-[54px] text-base">
-        Register
+      {error && (
+        <p role="alert" className="text-[13px] font-semibold text-err">
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={busy} className="btn btn-gold mt-1 h-[54px] text-base disabled:text-tx!">
+        {busy ? (
+          <>
+            <Spinner /> Creating account…
+          </>
+        ) : (
+          "Register"
+        )}
       </button>
       <p className="text-center text-sm text-mu">
         Already have an account?{" "}

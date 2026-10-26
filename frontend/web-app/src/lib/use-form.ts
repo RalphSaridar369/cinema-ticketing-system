@@ -13,7 +13,7 @@ export function useForm<F extends Record<string, string>>(initial: F) {
     name: key,
     value: values[key],
     error: errors[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const v = e.target.value;
       setValues((s) => ({ ...s, [key]: v }));
       setErrors((s) => ({ ...s, [key]: undefined }));

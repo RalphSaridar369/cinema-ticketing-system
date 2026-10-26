@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Field, Wordmark } from "@/components/ui";
+import { useState } from "react";
+import { Field, Spinner, Wordmark } from "@/components/ui";
 import { actions } from "@/lib/store";
 import { useForm } from "@/lib/use-form";
 import { emailOk, required } from "@/lib/validation";
@@ -10,8 +11,10 @@ import { emailOk, required } from "@/lib/validation";
 export default function LoginPage() {
   const router = useRouter();
   const form = useForm({ email: "", password: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const ok = form.check([
       ["email", required, "Email is required"],
@@ -19,8 +22,11 @@ export default function LoginPage() {
       ["password", required, "Password is required"],
     ]);
     if (!ok) return;
-    actions.logIn(form.values.email);
-    router.replace("/");
+    setBusy(true);
+    const err = await actions.logIn(form.values.email.trim(), form.values.password);
+    setBusy(false);
+    setError(err);
+    if (!err) router.replace("/");
   };
 
   return (
@@ -35,8 +41,19 @@ export default function LoginPage() {
       <Link href="/forgot-password" className="self-end text-sm font-semibold text-gold-ink hover:text-gold">
         Forgot password?
       </Link>
-      <button type="submit" className="btn btn-gold h-[54px] text-base">
-        Log in
+      {error && (
+        <p role="alert" className="text-[13px] font-semibold text-err">
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={busy} className="btn btn-gold h-[54px] text-base disabled:text-tx!">
+        {busy ? (
+          <>
+            <Spinner /> Logging in…
+          </>
+        ) : (
+          "Log in"
+        )}
       </button>
       <p className="text-center text-sm text-mu">
         New to Velour?{" "}
