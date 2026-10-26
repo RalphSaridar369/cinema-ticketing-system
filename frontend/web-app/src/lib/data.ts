@@ -7,6 +7,13 @@ export const MAX_SEATS = 10;
 export type City = "Beirut" | "Jounieh" | "Tripoli";
 export const CITIES: City[] = ["Beirut", "Jounieh", "Tripoli"];
 
+// [stored value, label]. Values match profile.gender in the database.
+export const GENDERS: [string, string][] = [
+  ["female", "Female"],
+  ["male", "Male"],
+  ["unspecified", "Prefer not to say"],
+];
+
 export type Branch = {
   id: number;
   slug: string;

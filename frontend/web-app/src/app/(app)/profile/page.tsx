@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { initials, useApp } from "@/components/app-shell";
-import { Field, Modal, SelectField } from "@/components/ui";
-import { CITIES } from "@/lib/data";
+import { Field, Modal, SelectField, Spinner } from "@/components/ui";
+import { CITIES, GENDERS } from "@/lib/data";
 import { actions, say, setState, type Profile, type Theme } from "@/lib/store";
 
 const FIELDS: [keyof Profile, string, string][] = [
@@ -21,6 +21,10 @@ export default function ProfilePage() {
   const router = useRouter();
   const [draft, setDraft] = useState<Profile>(s.profile);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [busy, setBusy] = useState(false);
+  // Seeded profiles can hold a city outside the branch list; keep it selectable.
+  const cities: string[] = [...CITIES, "Other"];
+  if (draft.city && !cities.includes(draft.city)) cities.splice(-1, 0, draft.city);
   const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setDraft((d) => ({ ...d, [k]: e.target.value }));
 
   return (
@@ -37,10 +41,13 @@ export default function ProfilePage() {
 
       <div className="flex flex-wrap items-start gap-6">
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            setState({ profile: draft });
-            say("Profile saved");
+            setBusy(true);
+            const res = await actions.saveProfile({ ...draft, email: draft.email.trim() });
+            setBusy(false);
+            if (res.error) say(res.error);
+            else say(res.emailPending ? "Saved. Confirm your new email from your inbox" : "Profile saved");
           }}
           className="card flex min-w-0 flex-[1_1_520px] flex-col gap-4 rounded-[20px] p-5"
         >
@@ -50,19 +57,28 @@ export default function ProfilePage() {
               <Field key={k} label={label} type={type} value={draft[k]} onChange={set(k)} className="h-12 bg-bg px-3.5 [color-scheme:inherit]" />
             ))}
             <SelectField label="Gender" value={draft.gender} onChange={set("gender")} className="h-12 bg-bg text-[15px]">
-              <option>Female</option>
-              <option>Male</option>
-              <option>Prefer not to say</option>
+              <option value="">Select</option>
+              {GENDERS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </SelectField>
             <SelectField label="City" value={draft.city} onChange={set("city")} className="h-12 bg-bg text-[15px]">
-              {CITIES.map((c) => (
+              <option value="">Select</option>
+              {cities.map((c) => (
                 <option key={c}>{c}</option>
               ))}
-              <option>Other</option>
             </SelectField>
           </div>
-          <button type="submit" className="btn btn-gold h-[50px] self-start px-[26px] text-[15px]">
-            Save changes
+          <button type="submit" disabled={busy} className="btn btn-gold h-[50px] self-start px-[26px] text-[15px] disabled:text-tx!">
+            {busy ? (
+              <>
+                <Spinner /> Saving…
+              </>
+            ) : (
+              "Save changes"
+            )}
           </button>
         </form>
 
@@ -103,8 +119,8 @@ export default function ProfilePage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  actions.logOut();
+                onClick={async () => {
+                  await actions.logOut();
                   router.replace("/login");
                 }}
                 className="btn h-[50px] bg-err text-[15px] text-white"

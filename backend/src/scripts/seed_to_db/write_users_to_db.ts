@@ -25,8 +25,8 @@ async function seedUsers() {
       continue;
     }
 
-    // 2. Create corresponding profile
-    const { error: profileError } = await supabase.from("profile").insert({
+    // 2. Fill in the profile (the on_auth_user_created trigger already made a bare row)
+    const { error: profileError } = await supabase.from("profile").upsert({
       id: authData.user.id,
       first_name: user.first_name,
       last_name: user.last_name,
