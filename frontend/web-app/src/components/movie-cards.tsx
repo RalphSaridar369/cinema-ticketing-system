@@ -45,11 +45,14 @@ export function PosterCard({ m, rank, sub }: { m: Movie; rank?: number; sub?: st
   );
 }
 
-export function GridPoster({ m }: { m: Movie }) {
+export function GridPoster({ m, badge }: { m: Movie; badge?: string }) {
   return (
     <Link href={href(m)} className="group flex flex-col gap-1.5">
       <div className="poster relative aspect-[2/3] rounded-xl border border-line transition-colors group-hover:border-gold">
         <Poster path={m.poster} title={m.title} sizes="(max-width: 768px) 50vw, 200px" />
+        {badge && (
+          <span className="absolute left-2 top-2 rounded-[5px] bg-gold px-[7px] py-[3px] font-mono text-[10px] font-semibold text-on-gold">{badge}</span>
+        )}
       </div>
       <span className="text-sm font-bold">{m.title}</span>
       <span className="text-xs text-mu">
