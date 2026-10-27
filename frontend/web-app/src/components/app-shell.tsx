@@ -9,10 +9,11 @@ import { RequireAuth } from "./auth-gate";
 import { BranchPill } from "./branch-picker";
 import { Spinner, Wordmark } from "./ui";
 
-type Tab = "Home" | "Book" | "My Tickets" | "Profile";
+type Tab = "Home" | "Explore" | "Book" | "My Tickets" | "Profile";
 
 function activeTab(path: string): Tab | null {
   if (path === "/") return "Home";
+  if (path.startsWith("/explore")) return "Explore";
   if (/^\/(branches|movies|book)/.test(path)) return "Book";
   if (/^\/(my-tickets|tickets)/.test(path)) return "My Tickets";
   if (path.startsWith("/profile")) return "Profile";
@@ -30,6 +31,7 @@ export const initials = (s: AppState) => (s.profile.first[0] ?? "") + (s.profile
 function useTabs(s: AppState): [Tab, string][] {
   return [
     ["Home", "/"],
+    ["Explore", "/explore"],
     ["Book", useBookHref(s)],
     ["My Tickets", "/my-tickets"],
     ["Profile", "/profile"],

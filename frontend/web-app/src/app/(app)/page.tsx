@@ -5,16 +5,12 @@ import { useApp } from "@/components/app-shell";
 import { BranchPill } from "@/components/branch-picker";
 import { FeatureCard, PosterCard } from "@/components/movie-cards";
 import { EmptyState, LoadError, Wordmark } from "@/components/ui";
-import { CATALOG_KEY, branchById, retry, showingNow, useCatalog, useTaste, type Movie } from "@/lib/catalog";
+import { CATALOG_KEY, branchById, confidentRating, retry, showingNow, useCatalog, useTaste, type Movie } from "@/lib/catalog";
 import { say, setState } from "@/lib/store";
 
 const ROW = 10;
 
 const byPopularity = (a: Movie, b: Movie) => b.popularity - a.popularity;
-
-// Rating pulled toward zero when there are few votes, so a single 10/10 vote
-// doesn't top the list.
-const confidentRating = (m: Movie) => (m.rating * m.votes) / (m.votes + 100);
 
 // Movies whose genres best match the user's taste, best rated first on a tie.
 function recommend(movies: Movie[], taste: Map<string, number>) {
