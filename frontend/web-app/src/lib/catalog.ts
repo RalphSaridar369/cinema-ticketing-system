@@ -275,9 +275,16 @@ export const EXPLORE_PAGE = 40;
 // vote would top the list.
 export const TOP_RATED_MIN_VOTES = 100;
 
-// Quotes a value for PostgREST's or() syntax, so commas and parentheses in a
-// search stay literal.
-const quoted = (s: string) => `"${s.replace(/["\\]/g, (c) => "\\" + c)}"`;
+// Lowercase without accents, matching movie.search_title, which the database
+// builds with unaccent(). LIKE wildcards in the search are escaped.
+const searchPattern = (q: string) =>
+  "%" +
+  q
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[\\%_]/g, (c) => "\\" + c) +
+  "%";
 
 async function loadExplorePage(f: ExploreFilters, page: number): Promise<ExplorePage> {
   const genres = loadGenres();
@@ -287,10 +294,7 @@ async function loadExplorePage(f: ExploreFilters, page: number): Promise<Explore
     .from("movie")
     .select(f.genre == null ? MOVIE_COLUMNS : `${MOVIE_COLUMNS}, genre_filter:movie_genre!inner(genre_id)`, { count: "exact" });
   if (f.genre != null) query = query.eq("genre_filter.genre_id", f.genre);
-  if (f.q) {
-    const like = quoted(`%${f.q}%`);
-    query = query.or(`title.ilike.${like},original_title.ilike.${like}`);
-  }
+  if (f.q) query = query.ilike("search_title", searchPattern(f.q));
   if (f.sort === "rated") query = query.gte("vote_count", TOP_RATED_MIN_VOTES).order("vote_average", { ascending: false });
   else if (f.sort === "newest") query = query.order("release_date", { ascending: false, nullsFirst: false });
   else query = query.order("popularity", { ascending: false, nullsFirst: false });
