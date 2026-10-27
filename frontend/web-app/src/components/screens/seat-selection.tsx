@@ -3,39 +3,37 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useApp } from "@/components/app-shell";
-import { BackLink, NotFoundNote } from "@/components/ui";
-import {
-  BRANCHES,
-  MAX_SEATS,
-  MOVIES,
-  ROW_LETTERS,
-  getDays,
-  isVipSeat,
-  money,
-  seatSort,
-  showtimeById,
-  unavailableSeats,
-  ticketCount,
-  type Showtime,
-} from "@/lib/data";
+import { BackLink, LoadError, NotFoundNote, ScreenFallback } from "@/components/ui";
+import { CATALOG_KEY, branchById, retry, showtimeById, useCatalog, type Branch, type Movie, type Showtime } from "@/lib/catalog";
+import { MAX_SEATS, ROW_LETTERS, getDays, isVipSeat, money, seatSort, unavailableSeats, ticketCount } from "@/lib/data";
 import { say } from "@/lib/store";
 
 export function SeatSelection({ params }: { params: Promise<{ showtime: string }> }) {
   const s = useApp();
   const { showtime } = use(params);
-  const st = showtimeById(showtime);
-  if (!st || st.soldOut) return <NotFoundNote title="This showtime isn’t available" href="/branches" cta="Pick another showtime" />;
-  return <SeatPicker key={st.id} st={st} taken={unavailableSeats(st, s.bookings)} />;
+  const catalog = useCatalog();
+  const c = catalog.data;
+  if (catalog.error)
+    return (
+      <div className="px-page pt-10">
+        <LoadError what="this showtime" onRetry={() => retry(CATALOG_KEY)} />
+      </div>
+    );
+  if (!c) return <ScreenFallback />;
+  const st = showtimeById(c, showtime);
+  const m = st && c.movies.find((x) => x.id === st.movie);
+  const b = st && branchById(c, st.branch);
+  if (!st || !m || !b || st.soldOut) return <NotFoundNote title="This showtime isn’t available" href="/branches" cta="Pick another showtime" />;
+  return <SeatPicker key={st.id} st={st} m={m} b={b} taken={unavailableSeats(st, s.bookings)} />;
 }
 
-function SeatPicker({ st, taken }: { st: Showtime; taken: Set<string> }) {
+function SeatPicker({ st, m, b, taken }: { st: Showtime; m: Movie; b: Branch; taken: Set<string> }) {
   const [sel, setSel] = useState<string[]>([]);
   const [zoom, setZoom] = useState(1);
   const free = st.room.rows * 10 - taken.size;
-  const m = MOVIES[st.movie];
   const sorted = seatSort(sel);
   const n = sel.length;
-  const total = money(st.room.price * n);
+  const total = money(st.price * n);
   const label = n ? sorted.join(", ") : "No seats selected";
   const checkoutHref = `/book/${st.id}/checkout?seats=${sorted.join(",")}`;
 
@@ -52,7 +50,7 @@ function SeatPicker({ st, taken }: { st: Showtime; taken: Set<string> }) {
   return (
     <>
       <div className="px-page flex items-center gap-3.5 border-b border-line pb-3 pt-3.5">
-        <BackLink href={`/movies/${m.slug}`}>
+        <BackLink href={`/movies/${m.id}`}>
           <span className="card flex h-10 w-10 items-center justify-center rounded-full text-tx" aria-label="Back">
             ←
           </span>
@@ -61,7 +59,7 @@ function SeatPicker({ st, taken }: { st: Showtime; taken: Set<string> }) {
           <h1 className="font-display text-[clamp(17px,1.7vw,24px)] font-semibold">{m.title}</h1>
           <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-mu">
             <span>
-              {BRANCHES[st.branch].name} · {st.room.name}
+              {b.name} · {st.room.name}
             </span>
             <span className="tag text-gold-ink">{st.room.format}</span>
             <span>
@@ -110,7 +108,7 @@ function SeatPicker({ st, taken }: { st: Showtime; taken: Set<string> }) {
           <span className="font-mono text-[11px] font-medium tracking-[.1em] text-mu">YOUR SEATS</span>
           <span className="font-display text-2xl font-semibold text-gold-ink">{label}</span>
           <Line k="Tickets" v={String(n)} />
-          <Line k="Price per seat" v={money(st.room.price)} />
+          <Line k="Price per seat" v={money(st.price)} />
           <div className="flex justify-between border-t border-line pt-3 text-lg font-extrabold">
             <span>Total</span>
             <span>{total}</span>
@@ -124,7 +122,7 @@ function SeatPicker({ st, taken }: { st: Showtime; taken: Set<string> }) {
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="truncate text-base font-extrabold text-gold-ink">{label}</span>
           <span className="text-[12.5px] text-mu">
-            {ticketCount(n)} · {money(st.room.price)} × {n} = {total}
+            {ticketCount(n)} · {money(st.price)} × {n} = {total}
           </span>
         </div>
         <ContinueButton href={n ? checkoutHref : null} label="Continue" className="h-[50px] px-6 text-[15px]" />

@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useApp } from "@/components/app-shell";
-import { BackLink, EmptyState, PageTitle } from "@/components/ui";
-import { BRANCHES, CITIES, type Branch } from "@/lib/data";
+import { BackLink, EmptyState, LoadError, PageTitle, ScreenFallback } from "@/components/ui";
+import { CATALOG_KEY, cities, retry, useCatalog, type Branch } from "@/lib/catalog";
 import { say, setState } from "@/lib/store";
 
 export default function BranchesPage() {
@@ -12,10 +12,12 @@ export default function BranchesPage() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const ql = q.trim().toLowerCase();
+  const catalog = useCatalog();
+  const c = catalog.data;
 
-  const groups = CITIES.map((city) => ({
+  const groups = (c ? cities(c) : []).map((city) => ({
     city,
-    items: BRANCHES.filter((b) => b.city === city && (!ql || `${b.name} ${b.city} ${b.addr}`.toLowerCase().includes(ql))),
+    items: c!.branches.filter((b) => b.city === city && (!ql || `${b.name} ${b.city} ${b.addr}`.toLowerCase().includes(ql))),
   })).filter((g) => g.items.length);
 
   const pick = (b: Branch | null) => {
@@ -53,7 +55,9 @@ export default function BranchesPage() {
         </button>
       )}
 
-      {!groups.length && <EmptyState>No branches match “{q}”.</EmptyState>}
+      {catalog.error && <LoadError what="branches" onRetry={() => retry(CATALOG_KEY)} />}
+      {!c && !catalog.error && <ScreenFallback />}
+      {c && !groups.length && <EmptyState>No branches match “{q}”.</EmptyState>}
 
       {groups.map((g) => (
         <section key={g.city} className="flex flex-col gap-3">

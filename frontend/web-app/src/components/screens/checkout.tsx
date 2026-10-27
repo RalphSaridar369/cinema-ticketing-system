@@ -3,8 +3,10 @@
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-shell";
-import { BackLink, NotFoundNote, PageTitle, Spinner } from "@/components/ui";
-import { BRANCHES, MAX_SEATS, MOVIES, getDays, money, seatSort, showtimeById, unavailableSeats } from "@/lib/data";
+import { Poster } from "@/components/movie-cards";
+import { BackLink, LoadError, NotFoundNote, PageTitle, ScreenFallback, Spinner } from "@/components/ui";
+import { CATALOG_KEY, branchById, retry, showtimeById, useCatalog } from "@/lib/catalog";
+import { MAX_SEATS, getDays, money, seatSort, unavailableSeats } from "@/lib/data";
 import { actions } from "@/lib/store";
 
 type Props = {
@@ -23,19 +25,29 @@ export function Checkout({ params, searchParams }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const st = showtimeById(showtime);
+  const catalog = useCatalog();
+  const c = catalog.data;
+  if (catalog.error)
+    return (
+      <div className="px-page pt-10">
+        <LoadError what="this showtime" onRetry={() => retry(CATALOG_KEY)} />
+      </div>
+    );
+  if (!c) return <ScreenFallback />;
+
+  const st = showtimeById(c, showtime);
+  const m = st && c.movies.find((x) => x.id === st.movie);
+  const b = st && branchById(c, st.branch);
   const taken = st ? unavailableSeats(st, s.bookings) : new Set<string>();
   const requested = (typeof raw === "string" ? raw.split(",") : []).filter(Boolean);
   const seats = seatSort([...new Set(requested)]);
   const valid =
     st && !st.soldOut && seats.length > 0 && seats.length <= MAX_SEATS && seats.every((id) => /^[A-Y]([1-9]|10)$/.test(id) && !taken.has(id));
 
-  if (!st || !valid) return <NotFoundNote title="Those seats aren’t available" href={st ? `/book/${st.id}` : "/branches"} cta="Choose seats again" />;
+  if (!st || !m || !b || !valid) return <NotFoundNote title="Those seats aren’t available" href={st ? `/book/${st.id}` : "/branches"} cta="Choose seats again" />;
 
-  const m = MOVIES[st.movie];
-  const b = BRANCHES[st.branch];
   const day = getDays()[st.day].label;
-  const total = money(st.room.price * seats.length);
+  const total = money(st.price * seats.length);
 
   const confirm = () => {
     setPending(true);
@@ -44,14 +56,18 @@ export function Checkout({ params, searchParams }: Props) {
       actions.addBooking({
         ref,
         showtime: st.id,
-        movie: st.movie,
-        branch: st.branch,
+        movie: m.id,
+        title: m.title,
+        branch: b.id,
+        branchName: b.name,
+        city: b.city,
         date: day,
         start: st.start,
         end: st.end,
-        roomKey: st.roomKey,
+        room: st.room.name,
+        format: st.room.format,
         seats,
-        price: st.room.price,
+        price: st.price,
         status: "Confirmed",
       });
       router.replace(`/tickets/${ref}?new=1`);
@@ -65,7 +81,7 @@ export function Checkout({ params, searchParams }: Props) {
     ["Date", day],
     ["Time", `${st.start} – ${st.end}`],
     ["Seats", seats.join(", ")],
-    ["Price per seat", money(st.room.price)],
+    ["Price per seat", money(st.price)],
     ["Tickets", String(seats.length)],
   ];
 
@@ -76,7 +92,9 @@ export function Checkout({ params, searchParams }: Props) {
       <div className="flex flex-wrap items-start gap-5">
         <section className="card flex min-w-0 flex-[1_1_460px] flex-col gap-1 rounded-[20px] p-5">
           <div className="mb-1.5 flex items-center gap-4 border-b border-line pb-3.5">
-            <div className="poster-deep aspect-[2/3] w-16 flex-none rounded-[10px]" />
+            <div className="poster-deep relative aspect-[2/3] w-16 flex-none rounded-[10px]">
+              <Poster path={m.poster} title={m.title} sizes="64px" />
+            </div>
             <div className="flex flex-col gap-1">
               <span className="font-display text-xl font-semibold">{m.title}</span>
               <span className="text-[13px] text-mu">Order summary</span>
@@ -94,7 +112,7 @@ export function Checkout({ params, searchParams }: Props) {
         <section className="card flex flex-[1_1_300px] flex-col gap-3.5 rounded-[20px] p-5">
           <div className="flex justify-between text-[14.5px] text-mu">
             <span>
-              {seats.length} × {money(st.room.price)}
+              {seats.length} × {money(st.price)}
             </span>
             <span className="text-tx">{total}</span>
           </div>

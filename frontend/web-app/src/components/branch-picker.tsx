@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { BRANCHES, CITIES } from "@/lib/data";
+import { branchById, cities, useCatalog } from "@/lib/catalog";
 import { say, setState, type AppState } from "@/lib/store";
 
 // Header branch pill: opens a dropdown and switches the branch in place.
@@ -12,7 +12,9 @@ export function BranchPill({ s, compact }: { s: AppState; compact?: boolean }) {
   const listId = useId();
   const path = usePathname();
   const router = useRouter();
-  const label = s.branch != null ? BRANCHES[s.branch].name : "All branches";
+  const c = useCatalog().data;
+  const branches = c?.branches ?? [];
+  const label = (c && branchById(c, s.branch)?.name) ?? "All branches";
 
   useEffect(() => {
     if (!open) return;
@@ -30,13 +32,14 @@ export function BranchPill({ s, compact }: { s: AppState; compact?: boolean }) {
     };
   }, [open]);
 
-  const pick = (id: number | null) => {
+  const pick = (id: string | null) => {
     setOpen(false);
     if (id === s.branch) return;
-    setState({ branch: id });
-    say(id == null ? "Showing all branches" : `Showing ${BRANCHES[id].name}`);
+    const b = branches.find((x) => x.id === id);
+    setState({ branch: b?.id ?? null });
+    say(b ? `Showing ${b.name}` : "Showing all branches");
     // A branch page is tied to its URL, so keep the URL in step with the pick.
-    if (path.startsWith("/branches/")) router.replace(id == null ? "/" : `/branches/${BRANCHES[id].slug}`);
+    if (path.startsWith("/branches/")) router.replace(b ? `/branches/${b.slug}` : "/");
   };
 
   return (
@@ -62,10 +65,10 @@ export function BranchPill({ s, compact }: { s: AppState; compact?: boolean }) {
           className="card absolute right-0 top-full z-40 mt-2 max-h-[min(70vh,460px)] w-[min(320px,calc(100vw-40px))] overflow-auto rounded-2xl p-1.5 shadow-[0_20px_50px_rgba(0,0,0,.35)]"
         >
           <Option selected={s.branch == null} onPick={() => pick(null)} title="All branches" sub="Every cinema in Beirut, Jounieh and Tripoli" />
-          {CITIES.map((city) => (
+          {(c ? cities(c) : []).map((city) => (
             <div key={city} role="group" aria-label={city}>
               <div className="px-3 pb-1 pt-3 font-mono text-[11px] font-medium tracking-[.12em] text-gold-ink">{city.toUpperCase()}</div>
-              {BRANCHES.filter((b) => b.city === city).map((b) => (
+              {branches.filter((b) => b.city === city).map((b) => (
                 <Option key={b.id} selected={s.branch === b.id} onPick={() => pick(b.id)} title={b.name} sub={b.addr} />
               ))}
             </div>

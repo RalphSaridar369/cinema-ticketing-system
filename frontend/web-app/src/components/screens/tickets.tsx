@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use, useState } from "react";
 import { useApp } from "@/components/app-shell";
 import { BackLink, NotFoundNote } from "@/components/ui";
-import { BRANCHES, MOVIES, ROOMS, money, ticketCount, type Booking } from "@/lib/data";
+import { money, ticketCount, type Booking } from "@/lib/data";
 import { say } from "@/lib/store";
 
 type Props = {
@@ -23,7 +23,7 @@ export function Tickets({ params, searchParams }: Props) {
   const b = s.bookings.find((x) => x.ref === ref);
   if (!b) return <NotFoundNote title="We couldn’t find that booking" href="/my-tickets" cta="Go to My Tickets" />;
 
-  const title = MOVIES[b.movie].title;
+  const title = b.title;
   const n = b.seats.length;
   const cur = Math.min(i, n - 1);
 
@@ -94,11 +94,9 @@ export function Tickets({ params, searchParams }: Props) {
 }
 
 function TicketCard({ b, title, seat, k, active }: { b: Booking; title: string; seat: string; k: number; active: boolean }) {
-  const branch = BRANCHES[b.branch];
-  const room = ROOMS[b.roomKey];
   const info: [string, string][] = [
-    ["Branch", `${branch.name}, ${branch.city}`],
-    ["Room · format", `${room.name} · ${room.format}`],
+    ["Branch", `${b.branchName}, ${b.city}`],
+    ["Room · format", `${b.room} · ${b.format}`],
     ["Date", b.date],
     ["Starts", b.start],
   ];

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { money, seatsLeft, type Showtime } from "@/lib/data";
+import type { Showtime } from "@/lib/catalog";
+import { money, seatsLeft } from "@/lib/data";
 import { say } from "@/lib/store";
 
 export function useOpenShowtime() {
@@ -65,7 +66,7 @@ export function ShowtimeRow({ st }: { st: Showtime }) {
           {left <= 12 && <span className="text-xs font-bold text-err">{left} left</span>}
         </div>
       </div>
-      <span className="text-base font-extrabold">{money(st.room.price)}</span>
+      <span className="text-base font-extrabold">{money(st.price)}</span>
       <span className="text-mu">›</span>
     </button>
   );

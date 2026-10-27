@@ -38,9 +38,11 @@ async function seedShowtimes() {
   for (let i = 0; i < showtimes.length; i += BATCH_SIZE) {
     const batch = showtimes.slice(i, i + BATCH_SIZE);
 
+    // Skip rows already in the table, so appending new days to
+    // showtimes.json and re-running only inserts the new showtimes.
     const { error } = await supabase
       .from("showtime")
-      .insert(batch);
+      .upsert(batch, { onConflict: "id", ignoreDuplicates: true });
 
     if (error) {
       console.error(

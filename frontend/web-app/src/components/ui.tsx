@@ -194,3 +194,14 @@ export function NotFoundNote({ title, href, cta }: { title: string; href: string
     </div>
   );
 }
+
+export function LoadError({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <EmptyState>
+      <span>Couldn’t load {what}. Check your connection.</span>
+      <button className="font-bold text-gold-ink" onClick={onRetry}>
+        Try again
+      </button>
+    </EmptyState>
+  );
+}
