@@ -23,6 +23,8 @@ export type Movie = {
   votes: number;
   popularity: number;
   adult: boolean;
+  // ISO date for sorting, and the same date formatted for display.
+  releaseDate: string;
   released: string;
   poster: string | null;
   backdrop: string | null;
@@ -119,6 +121,7 @@ function toMovie(r: MovieRow, genres: Map<number, string>): Movie {
     votes: r.vote_count ?? 0,
     popularity: r.popularity ?? 0,
     adult: r.adult,
+    releaseDate: r.release_date ?? "",
     released: releaseLabel(r.release_date),
     poster: r.poster_path,
     backdrop: r.backdrop_path,
@@ -132,9 +135,17 @@ function check<T>({ data, error }: { data: T | null; error: { message: string } 
 
 const chunks = <T,>(a: T[], n: number) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, (i + 1) * n));
 
-async function loadGenres() {
-  const rows = check(await supabase.from("genre").select("id, name"));
-  return new Map(rows.map((g) => [g.id as number, g.name as string]));
+// Genre names by id. Fetched once per session; a failed fetch is retried next time.
+let genreNames: Promise<Map<number, string>> | null = null;
+function loadGenres() {
+  genreNames ??= Promise.resolve(supabase.from("genre").select("id, name").order("name"))
+    .then(check)
+    .then((rows) => new Map(rows.map((g) => [g.id as number, g.name as string])))
+    .catch((e) => {
+      genreNames = null;
+      throw e;
+    });
+  return genreNames;
 }
 
 async function loadMovies(ids: string[], genres: Map<number, string> | Promise<Map<number, string>>) {
@@ -252,6 +263,45 @@ async function loadMoviesById(ids: string[]): Promise<Movie[]> {
   return ids.flatMap((id) => byId.get(id) ?? []);
 }
 
+// Explore: every movie in the database, scheduled or not, searched, filtered
+// and sorted by the database and fetched one page at a time.
+
+export type ExploreSort = "popular" | "rated" | "newest";
+export type ExploreFilters = { q: string; genre: number | null; sort: ExploreSort };
+export type ExplorePage = { movies: Movie[]; total: number };
+
+export const EXPLORE_PAGE = 40;
+// "Top rated" leaves out movies with fewer votes than this, or a single 10/10
+// vote would top the list.
+export const TOP_RATED_MIN_VOTES = 100;
+
+// Quotes a value for PostgREST's or() syntax, so commas and parentheses in a
+// search stay literal.
+const quoted = (s: string) => `"${s.replace(/["\\]/g, (c) => "\\" + c)}"`;
+
+async function loadExplorePage(f: ExploreFilters, page: number): Promise<ExplorePage> {
+  const genres = loadGenres();
+  // A second, filtered embed of movie_genre narrows the rows without trimming
+  // the genre list each movie carries.
+  let query = supabase
+    .from("movie")
+    .select(f.genre == null ? MOVIE_COLUMNS : `${MOVIE_COLUMNS}, genre_filter:movie_genre!inner(genre_id)`, { count: "exact" });
+  if (f.genre != null) query = query.eq("genre_filter.genre_id", f.genre);
+  if (f.q) {
+    const like = quoted(`%${f.q}%`);
+    query = query.or(`title.ilike.${like},original_title.ilike.${like}`);
+  }
+  if (f.sort === "rated") query = query.gte("vote_count", TOP_RATED_MIN_VOTES).order("vote_average", { ascending: false });
+  else if (f.sort === "newest") query = query.order("release_date", { ascending: false, nullsFirst: false });
+  else query = query.order("popularity", { ascending: false, nullsFirst: false });
+  // Ties keep a fixed order, so pages don't repeat or skip movies.
+  const from = page * EXPLORE_PAGE;
+  const { data, count, error } = await query.order("id").range(from, from + EXPLORE_PAGE - 1);
+  if (error) throw new Error(error.message);
+  const names = await genres;
+  return { movies: (data as unknown as MovieRow[]).map((r) => toMovie(r, names)), total: count ?? 0 };
+}
+
 // Genre weights from what the signed-in user has clicked, viewed, saved or shared.
 async function loadTaste(): Promise<Map<string, number>> {
   const rows = check(
@@ -324,6 +374,10 @@ export const CATALOG_KEY = "catalog";
 
 export const useCatalog = () => useResource(CATALOG_KEY, loadCatalog);
 export const useMovieDetail = (id: string) => useResource(`movie:${id}`, () => loadMovieDetail(id));
+export const GENRES_KEY = "genres";
+export const useGenres = () => useResource(GENRES_KEY, loadGenres);
+export const exploreKey = (f: ExploreFilters, page: number) => `explore:${f.sort}|${f.genre ?? ""}|${page}|${f.q}`;
+export const useExplorePage = (f: ExploreFilters, page: number) => useResource(exploreKey(f, page), () => loadExplorePage(f, page));
 export const useMoviesById = (ids: string[]) => useResource(`movies:${ids.join(",")}`, () => loadMoviesById(ids));
 export const useTaste = (userKey: string | null) => useResource(userKey && `taste:${userKey}`, loadTaste);
 
@@ -351,5 +405,9 @@ export const showingNow = (c: Catalog, branch: string | null) => {
   const ids = new Set(at.filter((s) => s.day === day).map((s) => s.movie));
   return c.movies.filter((m) => ids.has(m.id));
 };
+
+// Rating pulled toward zero when there are few votes, so a single 10/10 vote
+// doesn't top a list.
+export const confidentRating = (m: Movie) => (m.rating * m.votes) / (m.votes + 100);
 
 export const cities = (c: Catalog) => [...new Set(c.branches.map((b) => b.city))];
