@@ -1,6 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
-import { PAST_BOOKINGS, type Booking } from "./data";
+import type { Booking } from "./data";
 import { supabase } from "./supabase";
 import { STORAGE_KEY as KEY, applyTheme, type Theme } from "./theme";
 
@@ -24,12 +24,13 @@ export type AppState = {
   authReady: boolean;
   authed: boolean;
   profile: Profile;
-  branch: number | null;
+  // Branch and movie ids are database uuids.
+  branch: string | null;
   day: number;
   genre: string;
-  favorites: number[];
-  watchlist: number[];
-  ratings: Record<number, number>;
+  favorites: string[];
+  watchlist: string[];
+  ratings: Record<string, number>;
   bookings: Booking[];
   theme: Theme;
 };
@@ -46,7 +47,7 @@ const initial = (): AppState => ({
   favorites: [],
   watchlist: [],
   ratings: {},
-  bookings: PAST_BOOKINGS,
+  bookings: [],
   theme: "dark",
 });
 
@@ -59,9 +60,23 @@ function load(): AppState {
   try {
     saved = JSON.parse(localStorage.getItem(KEY) || "{}");
   } catch {}
-  state = { ...initial(), ...saved, authReady: false, authed: false };
+  state = { ...initial(), ...fromMockIds(saved), authReady: false, authed: false };
   watchSession();
   return state;
+}
+
+// Earlier builds saved numeric ids from the mock catalogue. Drop anything that
+// can't refer to a database row.
+function fromMockIds(saved: Partial<AppState>): Partial<AppState> {
+  const ids = (a: unknown) => (Array.isArray(a) ? a.filter((x): x is string => typeof x === "string") : []);
+  return {
+    ...saved,
+    branch: typeof saved.branch === "string" ? saved.branch : null,
+    favorites: ids(saved.favorites),
+    watchlist: ids(saved.watchlist),
+    ratings: Object.fromEntries(Object.entries(saved.ratings ?? {}).filter(([k]) => !/^\d+$/.test(k))),
+    bookings: (saved.bookings ?? []).filter((b) => typeof b.movie === "string" && typeof b.title === "string"),
+  };
 }
 
 export function setState(patch: Partial<AppState> | ((s: AppState) => Partial<AppState>)) {
@@ -207,12 +222,12 @@ export const actions = {
     setState({ profile: { ...p, email: data.user.email ?? "" } });
     return { error: null, emailPending };
   },
-  toggleList(key: "favorites" | "watchlist", movie: number) {
+  toggleList(key: "favorites" | "watchlist", movie: string) {
     const on = getState()[key].includes(movie);
     setState((s) => ({ [key]: on ? s[key].filter((x) => x !== movie) : [...s[key], movie] }));
     return !on;
   },
-  rate(movie: number, value: number) {
+  rate(movie: string, value: number) {
     setState((s) => ({ ratings: { ...s.ratings, [movie]: value } }));
   },
   addBooking(b: Booking) {

@@ -1,45 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useApp } from "@/components/app-shell";
 import { BranchPill } from "@/components/branch-picker";
 import { FeatureCard, PosterCard } from "@/components/movie-cards";
-import { EmptyState, Wordmark } from "@/components/ui";
-import { BRANCHES, GENRES, MOVIES, POPULAR, RECOMMENDED, plays } from "@/lib/data";
+import { EmptyState, LoadError, Wordmark } from "@/components/ui";
+import { CATALOG_KEY, branchById, retry, showingNow, useCatalog, useTaste, type Movie } from "@/lib/catalog";
 import { say, setState } from "@/lib/store";
 
-const LOADED_KEY = "velour:home-loaded";
+const ROW = 10;
 
-// Stands in for the first catalogue fetch of a session.
-function useFirstLoad(ms: number) {
-  const [loading, setLoading] = useState(() => {
-    try {
-      return !sessionStorage.getItem(LOADED_KEY);
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    if (!loading) return;
-    const t = setTimeout(() => {
-      try {
-        sessionStorage.setItem(LOADED_KEY, "1");
-      } catch {}
-      setLoading(false);
-    }, ms);
-    return () => clearTimeout(t);
-  }, [loading, ms]);
-  return loading;
+const byPopularity = (a: Movie, b: Movie) => b.popularity - a.popularity;
+
+// Rating pulled toward zero when there are few votes, so a single 10/10 vote
+// doesn't top the list.
+const confidentRating = (m: Movie) => (m.rating * m.votes) / (m.votes + 100);
+
+// Movies whose genres best match the user's taste, best rated first on a tie.
+function recommend(movies: Movie[], taste: Map<string, number>) {
+  const score = (m: Movie) => m.genres.reduce((sum, g) => sum + (taste.get(g) ?? 0), 0);
+  return movies.toSorted((a, b) => score(b) - score(a) || confidentRating(b) - confidentRating(a)).slice(0, ROW);
+}
+
+// "All" plus the genres of the given movies, most common first.
+function genresOf(movies: Movie[]) {
+  const count = new Map<string, number>();
+  for (const m of movies) for (const g of m.genres) count.set(g, (count.get(g) ?? 0) + 1);
+  return ["All", ...[...count].sort((a, b) => b[1] - a[1]).map(([g]) => g)];
 }
 
 export default function HomePage() {
   const s = useApp();
-  const loading = useFirstLoad(1400);
-  const branch = s.branch != null ? BRANCHES[s.branch] : null;
-  const atBranch = MOVIES.filter((m) => plays(s.branch, m.id));
+  const catalog = useCatalog();
+  const taste = useTaste(s.profile.email || null);
+  const c = catalog.data;
+  const loading = !catalog.error && (!c || (!taste.data && !taste.error));
+
+  const branch = c ? branchById(c, s.branch) : null;
+  const atBranch = c ? showingNow(c, branch?.id ?? null).toSorted(byPopularity) : [];
+  const genres = genresOf(atBranch);
   const nowShowing = s.genre === "All" ? atBranch : atBranch.filter((m) => m.genres.includes(s.genre));
-  const recommended = RECOMMENDED.filter((i) => plays(s.branch, i)).map((i) => MOVIES[i]);
+  const tasteMap = taste.data ?? new Map<string, number>();
+  const recommended = recommend(atBranch, tasteMap);
+  const popular = c ? showingNow(c, null).toSorted(byPopularity).slice(0, ROW) : [];
 
   return (
     <>
@@ -47,19 +50,23 @@ export default function HomePage() {
         <Wordmark size={14} />
         <BranchPill s={s} compact />
       </div>
-      {loading ? (
+      {catalog.error ? (
+        <div className="px-5 pt-10">
+          <LoadError what="what’s showing" onRetry={() => retry(CATALOG_KEY)} />
+        </div>
+      ) : loading ? (
         <HomeSkeleton />
       ) : (
         <div className="flex flex-col gap-[18px] pb-10 pt-3.5">
-          <SectionHead title="Recommended for you" aside="Based on what you watch" big />
-          <Row className="scroll-px-page snap-x snap-mandatory gap-4">
+          <SectionHead title="Recommended for you" aside={tasteMap.size ? "Based on what you watch" : "Top rated this week"} big />
+          <Row snap className="gap-4">
             {recommended.map((m) => (
               <FeatureCard key={m.id} m={m} />
             ))}
           </Row>
 
-          <Row className="gap-2 pt-1" label="Genres">
-            {GENRES.map((g) => (
+          <div role="group" aria-label="Genres" className="flex flex-wrap gap-2 px-5 pt-1">
+            {genres.map((g) => (
               <button
                 key={g}
                 aria-pressed={s.genre === g}
@@ -69,9 +76,9 @@ export default function HomePage() {
                 {g}
               </button>
             ))}
-          </Row>
+          </div>
 
-          <div className="px-page flex items-baseline justify-between pt-2">
+          <div className="flex items-baseline justify-between px-5 pt-2">
             <div className="flex flex-col gap-0.5">
               <h2 className="font-display text-[clamp(19px,1.8vw,24px)] font-semibold">Now Showing</h2>
               <span className="text-[13px] text-mu">
@@ -84,7 +91,7 @@ export default function HomePage() {
             <span className="text-[13px] text-mu">{nowShowing.length} films</span>
           </div>
           {!nowShowing.length && (
-            <div className="px-page">
+            <div className="px-5">
               <EmptyState>
                 <span>{branch ? `Nothing in ${s.genre} at ${branch.name} right now.` : `No movies in ${s.genre} right now.`}</span>
                 {branch && (
@@ -109,8 +116,8 @@ export default function HomePage() {
 
           <SectionHead title="Popular" aside="This week in Lebanon" />
           <Row className="gap-3.5">
-            {POPULAR.map((i, k) => (
-              <PosterCard key={i} m={MOVIES[i]} rank={k + 1} sub={`★ ${MOVIES[i].rating.toFixed(1)}`} />
+            {popular.map((m, k) => (
+              <PosterCard key={m.id} m={m} rank={k + 1} sub={`★ ${m.rating.toFixed(1)}`} />
             ))}
           </Row>
         </div>
@@ -121,16 +128,20 @@ export default function HomePage() {
 
 function SectionHead({ title, aside, big }: { title: string; aside: string; big?: boolean }) {
   return (
-    <div className={`px-page flex items-baseline justify-between ${big ? "" : "pt-2"}`}>
+    <div className={`flex items-baseline justify-between px-5 ${big ? "" : "pt-2"}`}>
       <h2 className={`font-display font-semibold ${big ? "text-[clamp(22px,2.2vw,30px)] tracking-[-.02em]" : "text-[clamp(19px,1.8vw,24px)]"}`}>{title}</h2>
       <span className="text-[13px] text-mu">{aside}</span>
     </div>
   );
 }
 
-function Row({ children, className = "", label }: { children: React.ReactNode; className?: string; label?: string }) {
+// The page gutter is margin, not padding, so scrolling stops exactly at the
+// first and last card, and overscroll-none stops the bounce past them. Snapping
+// rows snap the last card to the end, or the nearest card start would pull the
+// row back short of it.
+function Row({ children, className = "", snap }: { children: React.ReactNode; className?: string; snap?: boolean }) {
   return (
-    <div aria-label={label} className={`px-page no-scrollbar flex overflow-x-auto ${className}`}>
+    <div className={`no-scrollbar mx-5 flex overflow-x-auto overscroll-x-none ${snap ? "snap-x snap-mandatory [&>:last-child]:snap-end" : ""} ${className}`}>
       {children}
     </div>
   );
@@ -139,7 +150,7 @@ function Row({ children, className = "", label }: { children: React.ReactNode; c
 function HomeSkeleton() {
   const six = [1, 2, 3, 4, 5, 6];
   return (
-    <div className="px-page flex flex-col gap-[18px] pb-10 pt-5" aria-busy>
+    <div className="flex flex-col gap-[18px] px-5 pb-10 pt-5" aria-busy>
       <div className="h-6 w-[200px] rounded-md bg-s2" />
       <div className="flex gap-4 overflow-hidden">
         {six.map((x) => (

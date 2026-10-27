@@ -82,10 +82,6 @@
   .px-page {
     padding-inline: max(20px, calc((100% - 1240px) / 2));
   }
-  /* Keeps snapped cards aligned with the padded edge instead of the screen edge. */
-  .scroll-px-page {
-    scroll-padding-inline: max(20px, calc((100% - 1240px) / 2));
-  }
   .px-page-narrow {
     padding-inline: max(20px, calc((100% - 1040px) / 2));
   }

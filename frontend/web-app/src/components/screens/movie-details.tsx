@@ -1,25 +1,51 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { use } from "react";
 import { useApp } from "@/components/app-shell";
+import { Poster } from "@/components/movie-cards";
 import { ShowtimeRow } from "@/components/showtimes";
-import { DayPicker, Stars } from "@/components/ui";
-import { BRANCHES, MOVIES, getDays, runtime, showtimes } from "@/lib/data";
+import { DayPicker, LoadError, NotFoundNote, ScreenFallback, Stars } from "@/components/ui";
+import { CATALOG_KEY, branchById, posterUrl, retry, showtimesFor, useCatalog, useMovieDetail, type Catalog, type MovieDetail } from "@/lib/catalog";
+import { getDays } from "@/lib/data";
 import { actions, say, setState } from "@/lib/store";
 
-export function MovieDetails({ movieId }: { movieId: number }) {
+export function MovieDetails({ params }: { params: Promise<{ movie: string }> }) {
+  const { movie: id } = use(params);
+  const movie = useMovieDetail(id);
+  const catalog = useCatalog();
+  const error = movie.error ?? catalog.error;
+  if (error)
+    return (
+      <div className="px-page pt-10">
+        <LoadError
+          what="this movie"
+          onRetry={() => {
+            retry(`movie:${id}`);
+            retry(CATALOG_KEY);
+          }}
+        />
+      </div>
+    );
+  if (movie.data === undefined || !catalog.data) return <ScreenFallback />;
+  if (!movie.data) return <NotFoundNote title="We couldn’t find that movie" href="/" cta="Back to home" />;
+  return <Details m={movie.data} c={catalog.data} />;
+}
+
+function Details({ m, c }: { m: MovieDetail; c: Catalog }) {
   const s = useApp();
   const router = useRouter();
-  const m = MOVIES[movieId];
+  const movieId = m.id;
   const days = getDays();
-  const branch = s.branch != null ? BRANCHES[s.branch] : null;
+  const branch = branchById(c, s.branch);
 
   // With a branch picked, list its showtimes; otherwise group by branch.
-  const groups = (branch ? [branch] : BRANCHES)
-    .map((b) => ({ b, items: showtimes(b.id, movieId, s.day) }))
+  const groups = (branch ? [branch] : c.branches)
+    .map((b) => ({ b, items: showtimesFor(c, b.id, movieId, s.day) }))
     .filter((g) => g.items.length);
-  const anyOn = (d: number) => (branch ? [branch] : BRANCHES).some((b) => showtimes(b.id, movieId, d).length);
+  const anyOn = (d: number) => showtimesFor(c, branch?.id ?? null, movieId, d).length > 0;
   const next = groups.length ? -1 : days.findIndex((d) => d.index > s.day && anyOn(d.index));
 
   const fav = s.favorites.includes(movieId);
@@ -40,7 +66,9 @@ export function MovieDetails({ movieId }: { movieId: number }) {
 
   return (
     <>
+      <title>{m.title}</title>
       <div className="backdrop relative h-[clamp(230px,26vw,400px)]">
+        {m.backdrop && <Image src={posterUrl(m.backdrop, "w1280")} alt="" fill priority sizes="100vw" className="object-cover" />}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-40% to-bg" />
         <button
           onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}
@@ -49,24 +77,26 @@ export function MovieDetails({ movieId }: { movieId: number }) {
         >
           ←
         </button>
-        <span className="absolute right-5 top-[22px] font-mono text-[10px] text-mu">BACKDROP</span>
+        {!m.backdrop && <span className="absolute right-5 top-[22px] font-mono text-[10px] text-mu">BACKDROP</span>}
       </div>
 
       <div className="px-page flex flex-wrap gap-x-12 gap-y-8 pb-10">
         <div className="flex min-w-0 flex-[1_1_560px] flex-col gap-4">
           <div className="relative -mt-[clamp(70px,8vw,130px)] flex items-end gap-[18px]">
-            <div className="aspect-[2/3] w-[clamp(108px,15vw,210px)] flex-none rounded-[14px] border border-line bg-[repeating-linear-gradient(135deg,var(--s3)_0_10px,var(--s2)_10px_11px)] shadow-[0_20px_40px_rgba(0,0,0,.35)]" />
+            <div className="relative aspect-[2/3] w-[clamp(108px,15vw,210px)] flex-none rounded-[14px] border border-line bg-[repeating-linear-gradient(135deg,var(--s3)_0_10px,var(--s2)_10px_11px)] shadow-[0_20px_40px_rgba(0,0,0,.35)]">
+              <Poster path={m.poster} title={m.title} sizes="210px" />
+            </div>
             <div className="flex min-w-0 flex-col gap-1.5 pb-1">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="font-display text-[clamp(24px,3.2vw,46px)] font-semibold leading-[1.05] tracking-[-.025em]">{m.title}</h1>
                 {m.adult && <span className="rounded-md border-[1.5px] border-err px-[7px] py-[3px] text-xs font-extrabold text-err">18+</span>}
               </div>
               <span className="text-[13px] text-mu">
-                {m.original} · {m.lang}
+                {[m.original, m.lang].filter(Boolean).join(" · ")}
               </span>
               <span className="text-sm">
                 <span className="font-extrabold text-gold-ink">★ {m.rating.toFixed(1)}</span>
-                <span className="text-mu">/10 · {m.votes} votes</span>
+                <span className="text-mu">/10 · {m.votes.toLocaleString("en-US")} votes</span>
               </span>
             </div>
           </div>
@@ -77,9 +107,7 @@ export function MovieDetails({ movieId }: { movieId: number }) {
                 {g}
               </span>
             ))}
-            <span className="text-[13px] text-mu">
-              Released {m.released} · {runtime(m.runtime)}
-            </span>
+            {m.released && <span className="text-[13px] text-mu">Released {m.released}</span>}
           </div>
           <p className="max-w-[640px] text-pretty text-[15px] leading-relaxed text-mu">{m.overview}</p>
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { BRANCHES } from "@/lib/data";
+import { branchById, useCatalog } from "@/lib/catalog";
 import { useAppState, type AppState } from "@/lib/store";
 import { RequireAuth } from "./auth-gate";
 import { BranchPill } from "./branch-picker";
@@ -19,26 +19,32 @@ function activeTab(path: string): Tab | null {
   return null;
 }
 
-export const bookHref = (s: AppState) => (s.branch != null ? `/branches/${BRANCHES[s.branch].slug}` : "/branches");
+// The selected branch's page, or the branch list until the catalogue has loaded.
+export function useBookHref(s: AppState) {
+  const c = useCatalog().data;
+  const b = c ? branchById(c, s.branch) : null;
+  return b ? `/branches/${b.slug}` : "/branches";
+}
 export const initials = (s: AppState) => (s.profile.first[0] ?? "") + (s.profile.last[0] ?? "");
 
-function tabs(s: AppState): [Tab, string][] {
+function useTabs(s: AppState): [Tab, string][] {
   return [
     ["Home", "/"],
-    ["Book", bookHref(s)],
+    ["Book", useBookHref(s)],
     ["My Tickets", "/my-tickets"],
     ["Profile", "/profile"],
   ];
 }
 
 function DesktopNav({ s, tab }: { s: AppState; tab: Tab | null }) {
+  const tabs = useTabs(s);
   return (
     <header className="px-page sticky top-0 z-30 hidden h-[72px] flex-none items-center gap-11 border-b border-line bg-bg md:flex">
       <Link href="/">
         <Wordmark size={16} className="tracking-[.32em]" />
       </Link>
       <nav className="flex flex-1 gap-8 self-stretch">
-        {tabs(s)
+        {tabs
           .filter(([l]) => l !== "Profile")
           .map(([l, href]) => (
             <Link
@@ -64,9 +70,10 @@ function DesktopNav({ s, tab }: { s: AppState; tab: Tab | null }) {
 }
 
 function TabBar({ s, tab }: { s: AppState; tab: Tab | null }) {
+  const tabs = useTabs(s);
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[76px] border-t border-line bg-s1 pb-3 md:hidden">
-      {tabs(s).map(([l, href]) => {
+      {tabs.map(([l, href]) => {
         const on = l === tab;
         return (
           <Link key={l} href={href} aria-current={on ? "page" : undefined} className="flex flex-1 flex-col items-center justify-center gap-1.5">

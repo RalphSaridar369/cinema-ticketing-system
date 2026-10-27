@@ -1,13 +1,11 @@
-import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { BranchMovies } from "@/components/screens/branch-movies";
-import { BRANCHES, branchBySlug } from "@/lib/data";
+import { ScreenFallback } from "@/components/ui";
 
-export function generateStaticParams() {
-  return BRANCHES.map((b) => ({ branch: b.slug }));
-}
-
-export default async function BranchPage({ params }: PageProps<"/branches/[branch]">) {
-  const branch = branchBySlug((await params).branch);
-  if (!branch) notFound();
-  return <BranchMovies branchId={branch.id} />;
+export default function BranchPage({ params }: PageProps<"/branches/[branch]">) {
+  return (
+    <Suspense fallback={<ScreenFallback />}>
+      <BranchMovies params={params} />
+    </Suspense>
+  );
 }
