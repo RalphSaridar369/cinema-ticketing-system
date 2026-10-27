@@ -341,4 +341,15 @@ export const moviesAt = (c: Catalog, branch: string | null) => {
   return c.movies.filter((m) => ids.has(m.id));
 };
 
+// Movies on the first day that still has showtimes: today, or tomorrow once
+// today's last show has started. The 7-day window can span two weekly lineups,
+// so this keeps the list to the lineup playing now.
+export const showingNow = (c: Catalog, branch: string | null) => {
+  const at = c.showtimes.filter((s) => branch == null || s.branch === branch);
+  if (!at.length) return [];
+  const day = Math.min(...at.map((s) => s.day));
+  const ids = new Set(at.filter((s) => s.day === day).map((s) => s.movie));
+  return c.movies.filter((m) => ids.has(m.id));
+};
+
 export const cities = (c: Catalog) => [...new Set(c.branches.map((b) => b.city))];

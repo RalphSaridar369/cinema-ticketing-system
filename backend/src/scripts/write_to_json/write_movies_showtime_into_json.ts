@@ -38,6 +38,10 @@ interface ScheduledShowtime {
 
 const DAYS_TO_GENERATE = 14;
 
+const LINEUP_SIZE = 30;
+
+const DAYS_PER_LINEUP = 7;
+
 const SHOWTIME_SLOTS = ["10:00", "12:30", "15:00", "17:30", "20:00", "22:30"];
 
 const CLEANUP_TIME_MINUTES = 20;
@@ -78,7 +82,7 @@ function getMovieWeight(movie: Movie): number {
   return popularityWeight + ratingWeight;
 }
 
-function selectMoviesForDay(
+function selectMovies(
   movies: Movie[],
   minimumMovies: number,
   maximumMovies: number
@@ -164,7 +168,7 @@ function movieAlreadyScheduledTooManyTimes(
   schedule: ScheduledShowtime[]
 ): boolean {
   const count = schedule.filter((showtime) => {
-    const showtimeDate = showtime.starts_at.toISOString().split("T")[0];
+    const showtimeDate = formatDate(showtime.starts_at);
 
     return (
       showtime.movie_id === movieId &&
@@ -188,8 +192,12 @@ function addDays(date: Date, days: number): Date {
   return result;
 }
 
+// Local calendar date, to match createDate(), which reads times as local.
 function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -225,105 +233,112 @@ async function generateShowtimes(): Promise<Showtime[]> {
 
   const schedule: ScheduledShowtime[] = [];
 
-  let showtimeId = 1;
+  const roomsByBranch = new Map<string, Room[]>();
+
+  for (const room of rooms) {
+    roomsByBranch.set(room.branch_id, [
+      ...(roomsByBranch.get(room.branch_id) ?? []),
+      room,
+    ]);
+  }
+
+  // Each block of DAYS_PER_LINEUP days screens one lineup of LINEUP_SIZE
+  // movies at every branch, and no movie returns in a later block.
+  const usedMovieIds = new Set<string>();
+
+  let lineup: Movie[] = [];
 
   for (let day = 0; day < DAYS_TO_GENERATE; day++) {
     const currentDate = addDays(startDate, day);
 
     const date = formatDate(currentDate);
 
-    console.log(`Generating schedule for ${date}...`);
+    if (day % DAYS_PER_LINEUP === 0) {
+      const available = movies.filter((movie) => !usedMovieIds.has(movie.id));
 
-    const minimumMovies = Math.min(
-      movies.length,
-      Math.max(20, Math.floor(movies.length * 0.08))
-    );
-
-    const maximumMovies = Math.min(
-      movies.length,
-      Math.max(40, Math.floor(movies.length * 0.18))
-    );
-
-    const moviesForToday = selectMoviesForDay(
-      movies,
-      minimumMovies,
-      maximumMovies
-    );
-    const shuffledRooms = shuffle(rooms);
-
-    for (const movie of moviesForToday) {
-      const weight = getMovieWeight(movie);
-
-      let numberOfScreenings = 1;
-
-      if (weight > 8) {
-        numberOfScreenings = randomInt(3, 5);
-      } else if (weight > 5) {
-        numberOfScreenings = randomInt(2, 4);
-      } else if (weight > 3) {
-        numberOfScreenings = randomInt(1, 3);
+      if (available.length < LINEUP_SIZE) {
+        throw new Error(
+          `Only ${available.length} unused movies left for the lineup starting ${date}.`
+        );
       }
 
-      const slots = shuffle(SHOWTIME_SLOTS);
+      lineup = selectMovies(available, LINEUP_SIZE, LINEUP_SIZE);
 
-      let screeningsCreated = 0;
+      lineup.forEach((movie) => usedMovieIds.add(movie.id));
 
-      for (const slot of slots) {
-        if (screeningsCreated >= numberOfScreenings) {
-          break;
+      console.log(`Lineup from ${date}: ${lineup.length} movies.`);
+    }
+
+    console.log(`Generating schedule for ${date}...`);
+
+    const createdBefore = schedule.length;
+
+    for (const branchRooms of roomsByBranch.values()) {
+      for (const movie of shuffle(lineup)) {
+        const weight = getMovieWeight(movie);
+
+        let numberOfScreenings = 2;
+
+        if (weight > 8) {
+          numberOfScreenings = randomInt(3, 4);
+        } else if (weight > 5) {
+          numberOfScreenings = randomInt(2, 3);
         }
-        const roomsForScreening = shuffle(shuffledRooms);
 
-        for (const room of roomsForScreening) {
-          if (!canMoviePlayInRoom(movie, room)) {
-            continue;
+        const slots = shuffle(SHOWTIME_SLOTS);
+
+        let screeningsCreated = 0;
+
+        for (const slot of slots) {
+          if (screeningsCreated >= numberOfScreenings) {
+            break;
           }
 
-          if (
-            movieAlreadyScheduledTooManyTimes(movie.id, room.id, date, schedule)
-          ) {
-            continue;
-          }
-
-          const runtime = generateRuntime();
-
-          const startsAt = createDate(date, slot);
-
-          const endsAt = new Date(startsAt.getTime() + runtime * 60 * 1000);
-
-          const conflict = schedule.some((existing) => {
-            if (existing.room_id !== room.id) {
-              return false;
+          for (const room of shuffle(branchRooms)) {
+            if (!canMoviePlayInRoom(movie, room)) {
+              continue;
             }
 
-            return hasConflict(startsAt, endsAt, existing);
-          });
+            if (
+              movieAlreadyScheduledTooManyTimes(movie.id, room.id, date, schedule)
+            ) {
+              continue;
+            }
 
-          if (conflict) {
-            continue;
+            const runtime = generateRuntime();
+
+            const startsAt = createDate(date, slot);
+
+            const endsAt = new Date(startsAt.getTime() + runtime * 60 * 1000);
+
+            const conflict = schedule.some((existing) => {
+              if (existing.room_id !== room.id) {
+                return false;
+              }
+
+              return hasConflict(startsAt, endsAt, existing);
+            });
+
+            if (conflict) {
+              continue;
+            }
+
+            schedule.push({
+              movie_id: movie.id,
+              room_id: room.id,
+              starts_at: startsAt,
+              ends_at: endsAt,
+            });
+
+            screeningsCreated++;
+
+            break;
           }
-
-          schedule.push({
-            movie_id: movie.id,
-            room_id: room.id,
-            starts_at: startsAt,
-            ends_at: endsAt,
-          });
-
-          screeningsCreated++;
-
-          break;
         }
       }
     }
 
-    console.log(
-      `  Created ${
-        schedule.filter((showtime) =>
-          showtime.starts_at.toISOString().startsWith(date)
-        ).length
-      } showtimes.`
-    );
+    console.log(`  Created ${schedule.length - createdBefore} showtimes.`);
   }
 
   const showtimes: Showtime[] = schedule
@@ -340,15 +355,28 @@ async function generateShowtimes(): Promise<Showtime[]> {
       created_at: new Date().toISOString(),
     }));
 
+  // Keep earlier showtimes, which reservations and tickets point at, and
+  // replace everything from the start of the new schedule onwards.
+  const cutoff = createDate(formatDate(startDate), "00:00");
+
+  const existing = await readJson<Showtime[]>("data/showtimes.json").catch(
+    () => [] as Showtime[]
+  );
+
+  const past = existing.filter(
+    (showtime) => new Date(showtime.starts_at) < cutoff
+  );
+
   await fs.writeFile(
     "data/showtimes.json",
-    JSON.stringify(showtimes, null, 2),
+    JSON.stringify([...past, ...showtimes], null, 2),
     "utf-8"
   );
 
   console.log("");
   console.log(`Finished! Generated ${showtimes.length} showtimes.`);
-  console.log(`Schedule covers ${DAYS_TO_GENERATE} days.`);
+  console.log(`Schedule covers ${DAYS_TO_GENERATE} days from ${cutoff.toISOString()}.`);
+  console.log(`Kept ${past.length} earlier showtimes.`);
   console.log("Saved to showtimes.json");
 
   return showtimes;

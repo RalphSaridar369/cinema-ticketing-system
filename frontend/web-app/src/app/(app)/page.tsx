@@ -5,7 +5,7 @@ import { useApp } from "@/components/app-shell";
 import { BranchPill } from "@/components/branch-picker";
 import { FeatureCard, PosterCard } from "@/components/movie-cards";
 import { EmptyState, LoadError, Wordmark } from "@/components/ui";
-import { CATALOG_KEY, branchById, moviesAt, retry, useCatalog, useTaste, type Movie } from "@/lib/catalog";
+import { CATALOG_KEY, branchById, retry, showingNow, useCatalog, useTaste, type Movie } from "@/lib/catalog";
 import { say, setState } from "@/lib/store";
 
 const ROW = 10;
@@ -37,12 +37,12 @@ export default function HomePage() {
   const loading = !catalog.error && (!c || (!taste.data && !taste.error));
 
   const branch = c ? branchById(c, s.branch) : null;
-  const atBranch = c ? moviesAt(c, branch?.id ?? null).toSorted(byPopularity) : [];
+  const atBranch = c ? showingNow(c, branch?.id ?? null).toSorted(byPopularity) : [];
   const genres = genresOf(atBranch);
   const nowShowing = s.genre === "All" ? atBranch : atBranch.filter((m) => m.genres.includes(s.genre));
   const tasteMap = taste.data ?? new Map<string, number>();
   const recommended = recommend(atBranch, tasteMap);
-  const popular = c ? c.movies.toSorted(byPopularity).slice(0, ROW) : [];
+  const popular = c ? showingNow(c, null).toSorted(byPopularity).slice(0, ROW) : [];
 
   return (
     <>
