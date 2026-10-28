@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { use, useState } from "react";
-import { useApp } from "@/components/app-shell";
 import { BackLink, LoadError, NotFoundNote, ScreenFallback } from "@/components/ui";
+import { seatMapKey, useSeatMap, type SeatMap as Seats } from "@/lib/booking";
+import { seatLabel, sortSeats } from "@/lib/booking-view";
 import { CATALOG_KEY, branchById, retry, showtimeById, useCatalog, type Branch, type Movie, type Showtime } from "@/lib/catalog";
-import { MAX_SEATS, ROW_LETTERS, getDays, isVipSeat, money, seatSort, unavailableSeats, ticketCount } from "@/lib/data";
+import { MAX_SEATS, ROW_LETTERS, getDays, money, ticketCount } from "@/lib/data";
 import { say } from "@/lib/store";
 
 export function SeatSelection({ params }: { params: Promise<{ showtime: string }> }) {
-  const s = useApp();
   const { showtime } = use(params);
   const catalog = useCatalog();
   const c = catalog.data;
@@ -24,14 +24,29 @@ export function SeatSelection({ params }: { params: Promise<{ showtime: string }
   const m = st && c.movies.find((x) => x.id === st.movie);
   const b = st && branchById(c, st.branch);
   if (!st || !m || !b || st.soldOut) return <NotFoundNote title="This showtime isn’t available" href="/branches" cta="Pick another showtime" />;
-  return <SeatPicker key={st.id} st={st} m={m} b={b} taken={unavailableSeats(st, s.bookings)} />;
+  return <SeatLoader key={st.id} st={st} m={m} b={b} />;
 }
 
-function SeatPicker({ st, m, b, taken }: { st: Showtime; m: Movie; b: Branch; taken: Set<string> }) {
+function SeatLoader({ st, m, b }: { st: Showtime; m: Movie; b: Branch }) {
+  const map = useSeatMap(st.id, st.room.id);
+  if (map.error)
+    return (
+      <div className="px-page pt-10">
+        <LoadError what="the seat map" onRetry={() => retry(seatMapKey(st.id))} />
+      </div>
+    );
+  if (!map.data) return <ScreenFallback />;
+  const { seats, taken } = map.data;
+  if (!seats.length || seats.every((x) => taken.has(x.id)))
+    return <NotFoundNote title="This showtime is sold out" href={`/movies/${m.id}`} cta="Pick another showtime" />;
+  return <SeatPicker st={st} m={m} b={b} map={map.data} />;
+}
+
+function SeatPicker({ st, m, b, map }: { st: Showtime; m: Movie; b: Branch; map: Seats }) {
   const [sel, setSel] = useState<string[]>([]);
   const [zoom, setZoom] = useState(1);
-  const free = st.room.rows * 10 - taken.size;
-  const sorted = seatSort(sel);
+  const free = map.seats.length - map.taken.size;
+  const sorted = sortSeats(sel.map((l) => ({ label: l, row: l[0], number: Number(l.slice(1)) }))).map((x) => x.label);
   const n = sel.length;
   const total = money(st.price * n);
   const label = n ? sorted.join(", ") : "No seats selected";
@@ -80,7 +95,7 @@ function SeatPicker({ st, m, b, taken }: { st: Showtime; m: Movie; b: Branch; ta
           <div className="relative">
             <div className="card mx-2 h-[452px] overflow-auto rounded-2xl pt-[52px] md:mx-0 md:h-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:pt-2">
               <div style={{ zoom }} className="md:[zoom:1]!">
-                <SeatMap st={st} taken={taken} sel={sel} onTap={tap} />
+                <SeatMap map={map} sel={sel} onTap={tap} />
               </div>
             </div>
             <div className="absolute right-2.5 top-2.5 flex flex-col overflow-hidden rounded-xl border border-line bg-s1 shadow-[0_6px_18px_rgba(0,0,0,.25)] md:hidden">
@@ -131,27 +146,26 @@ function SeatPicker({ st, m, b, taken }: { st: Showtime; m: Movie; b: Branch; ta
   );
 }
 
-function SeatMap({ st, taken, sel, onTap }: { st: Showtime; taken: Set<string>; sel: string[]; onTap: (id: string) => void }) {
-  const rows = Array.from({ length: st.room.rows }, (_, r) => r);
-  const seat = (r: number, i: number) => {
-    const id = ROW_LETTERS[r] + i;
+function SeatMap({ map, sel, onTap }: { map: Seats; sel: string[]; onTap: (label: string) => void }) {
+  const rows = [...ROW_LETTERS].map((letter) => ({ letter, seats: map.seats.filter((x) => x.row === letter) })).filter((r) => r.seats.length);
+  const seat = (s: Seats["seats"][number]) => {
+    const id = seatLabel(s);
     const base = "flex h-[calc(var(--seat)*.88)] w-[var(--seat)] items-center justify-center rounded-[7px_7px_4px_4px]";
-    if (taken.has(id))
+    if (map.taken.has(s.id))
       return (
-        <div key={i} aria-label={`${id}, taken`} className={`${base} bg-s3 text-[10px] text-mu opacity-45`}>
+        <div key={s.id} aria-label={`${id}, taken`} className={`${base} bg-s3 text-[10px] text-mu opacity-45`}>
           ×
         </div>
       );
     const selected = sel.includes(id);
-    const vip = isVipSeat(st, r, i);
     const look = selected
       ? "bg-gold text-on-gold text-[10px] font-extrabold"
-      : vip
+      : s.vip
         ? "border-[1.5px] border-gold-ink text-gold-ink text-[9.5px]"
         : "bg-s2 border border-line text-mu text-[9.5px] hover:border-gold";
     return (
-      <button key={i} title={id} aria-label={`${id}${vip ? ", VIP" : ""}`} aria-pressed={selected} onClick={() => onTap(id)} className={`${base} ${look}`}>
-        {i}
+      <button key={s.id} title={id} aria-label={`${id}${s.vip ? ", VIP" : ""}`} aria-pressed={selected} onClick={() => onTap(id)} className={`${base} ${look}`}>
+        {s.number}
       </button>
     );
   };
@@ -160,13 +174,13 @@ function SeatMap({ st, taken, sel, onTap }: { st: Showtime; taken: Set<string>; 
     <div className="mx-auto flex w-max flex-col items-center gap-1.5 px-2 pb-5 pt-2 [--seat:clamp(25px,2.4vw,34px)]">
       <div className="h-[22px] w-[calc(var(--seat)*10.5)] rounded-[50%_50%_0_0/100%_100%_0_0] border-t-[3px] border-gold shadow-[0_-10px_24px_-12px_var(--gold)]" />
       <span className="-mt-2.5 mb-3 font-mono text-[10px] font-medium tracking-[.3em] text-mu">SCREEN</span>
-      {rows.map((r) => (
-        <div key={r} className="flex items-center gap-[calc(var(--seat)*.18)]">
-          <span className="w-4 font-mono text-[11px] font-medium text-mu">{ROW_LETTERS[r]}</span>
-          {[1, 2, 3, 4, 5].map((i) => seat(r, i))}
+      {rows.map(({ letter, seats }) => (
+        <div key={letter} className="flex items-center gap-[calc(var(--seat)*.18)]">
+          <span className="w-4 font-mono text-[11px] font-medium text-mu">{letter}</span>
+          {seats.slice(0, 5).map(seat)}
           <span className="w-[calc(var(--seat)*.7)]" />
-          {[6, 7, 8, 9, 10].map((i) => seat(r, i))}
-          <span className="w-4 text-right font-mono text-[11px] font-medium text-mu">{ROW_LETTERS[r]}</span>
+          {seats.slice(5).map(seat)}
+          <span className="w-4 text-right font-mono text-[11px] font-medium text-mu">{letter}</span>
         </div>
       ))}
     </div>

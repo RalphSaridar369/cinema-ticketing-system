@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { Showtime } from "@/lib/catalog";
-import { money, seatsLeft } from "@/lib/data";
+import { money } from "@/lib/data";
 import { say } from "@/lib/store";
 
 export function useOpenShowtime() {
@@ -36,9 +36,10 @@ export function ShowtimeChip({ st }: { st: Showtime }) {
 }
 
 // Full-width row used on the movie details page.
-export function ShowtimeRow({ st }: { st: Showtime }) {
+// `left` is the live seats-left count; undefined while it loads.
+export function ShowtimeRow({ st, left }: { st: Showtime; left?: number }) {
   const open = useOpenShowtime();
-  if (st.soldOut)
+  if (st.soldOut || left === 0)
     return (
       <div className="flex items-center gap-3.5 rounded-[14px] border border-dashed border-line px-4 py-3.5 opacity-60">
         <div className="flex flex-1 flex-col gap-1">
@@ -53,7 +54,6 @@ export function ShowtimeRow({ st }: { st: Showtime }) {
         <span className="rounded-md bg-s3 px-[9px] py-[5px] font-mono text-[11px] font-semibold tracking-[.06em]">SOLD OUT</span>
       </div>
     );
-  const left = seatsLeft(st);
   return (
     <button onClick={() => open(st)} className="card card-link flex items-center gap-3.5 rounded-[14px] px-4 py-3.5 text-left">
       <div className="flex flex-1 flex-col gap-1">
@@ -63,7 +63,7 @@ export function ShowtimeRow({ st }: { st: Showtime }) {
         <div className="flex items-center gap-2">
           <span className="text-[13px] text-mu">{st.room.name}</span>
           <span className="tag text-gold-ink">{st.room.format}</span>
-          {left <= 12 && <span className="text-xs font-bold text-err">{left} left</span>}
+          {left !== undefined && left <= 12 && <span className="text-xs font-bold text-err">{left} left</span>}
         </div>
       </div>
       <span className="text-base font-extrabold">{money(st.price)}</span>

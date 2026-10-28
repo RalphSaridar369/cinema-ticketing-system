@@ -31,7 +31,7 @@ export type Booking = {
 };
 
 const BOOKINGS_KEY = "bookings";
-const seatMapKey = (showtimeId: string) => `seatmap:${showtimeId}`;
+export const seatMapKey = (showtimeId: string) => `seatmap:${showtimeId}`;
 // Showtime of each loaded booking, so cancelling can refresh its seat map.
 const showtimeOf = new Map<string, string>();
 const SEATS_LEFT = "seats-left:";

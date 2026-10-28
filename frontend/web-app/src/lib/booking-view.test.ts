@@ -33,4 +33,6 @@ test("seatsFromLabels", () => {
   assert.deepEqual(seatsFromLabels(["E4", "E5"], seats), [seats[0], seats[1]]);
   assert.equal(seatsFromLabels(["E4", "E4"], seats), null);
   assert.equal(seatsFromLabels(["Z99"], seats), null);
+  // A label for a row the room doesn't have.
+  assert.equal(seatsFromLabels(["A1", "B1"], [{ id: "a1", row: "A", number: 1, vip: false }]), null);
 });
