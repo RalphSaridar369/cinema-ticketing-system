@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useApp } from "@/components/app-shell";
 import { BackLink, LoadError, Modal, NotFoundNote, ScreenFallback } from "@/components/ui";
 import { bookingsKey, cancelBooking, useMyBookings, type Booking } from "@/lib/booking";
-import { retry } from "@/lib/catalog";
+import { refresh, retry } from "@/lib/catalog";
 import { money, ticketCount } from "@/lib/data";
 import { say } from "@/lib/store";
 
@@ -26,8 +26,22 @@ export function Tickets({ params, searchParams }: Props) {
   const [busy, setBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const bookings = useMyBookings(s.userId);
+  const found = bookings.data?.some((x) => x.ref === ref);
+  // The cache may predate this booking (just booked, or booked elsewhere), so
+  // a missing ref gets one fresh load before it counts as not found.
+  const [reloaded, setReloaded] = useState<string | null>(null);
+  const reloadKey = `${s.userId}:${ref}`;
+  const reloading = !!bookings.data && !found && reloaded !== reloadKey;
+  useEffect(() => {
+    if (!reloading || !s.userId) return;
+    let live = true;
+    void refresh(bookingsKey(s.userId)).then(() => live && setReloaded(reloadKey));
+    return () => {
+      live = false;
+    };
+  }, [reloading, s.userId, reloadKey]);
   if (bookings.error) return <LoadError what="this booking" onRetry={() => s.userId && retry(bookingsKey(s.userId))} />;
-  if (!bookings.data) return <ScreenFallback />;
+  if (!bookings.data || reloading) return <ScreenFallback />;
   const b = bookings.data.find((x) => x.ref === ref);
   if (!b) return <NotFoundNote title="We couldn’t find that booking" href="/my-tickets" cta="Go to My Tickets" />;
 

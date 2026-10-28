@@ -75,8 +75,11 @@ function load(): AppState {
 // can't refer to a database row.
 function fromMockIds(saved: Partial<AppState>): Partial<AppState> {
   const ids = (a: unknown) => (Array.isArray(a) ? a.filter((x): x is string => typeof x === "string") : []);
+  // Bookings now live in the database; drop the old local copy.
+  const rest: Record<string, unknown> = { ...saved };
+  delete rest.bookings;
   return {
-    ...saved,
+    ...rest,
     branch: typeof saved.branch === "string" ? saved.branch : null,
     favorites: ids(saved.favorites),
     watchlist: ids(saved.watchlist),
@@ -304,7 +307,7 @@ async function save(write: (userId: string) => PromiseLike<{ error: unknown }>, 
     undo();
     say("Couldn’t save that. Try again.");
   }
-  refresh(TASTE_KEY);
+  void refresh(TASTE_KEY);
 }
 
 // Toasts are ephemeral and kept outside the persisted store.

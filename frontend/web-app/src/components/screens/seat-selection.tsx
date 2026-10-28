@@ -30,7 +30,9 @@ export function SeatSelection({ params }: { params: Promise<{ showtime: string }
 function SeatLoader({ st, m, b }: { st: Showtime; m: Movie; b: Branch }) {
   const map = useSeatMap(st.id, st.room.id);
   // A cached map may be stale: show it now, replace it with fresh data.
-  useEffect(() => refresh(seatMapKey(st.id)), [st.id]);
+  useEffect(() => {
+    void refresh(seatMapKey(st.id));
+  }, [st.id]);
   if (map.error)
     return (
       <div className="px-page pt-10">

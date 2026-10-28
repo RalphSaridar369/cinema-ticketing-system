@@ -128,42 +128,40 @@ export const useSeatsLeft = (showtimeIds: string[]): Resource<Map<string, number
 export const useMyBookings = (userId: string | null): Resource<Booking[]> =>
   useResource(userId && bookingsKey(userId), () => loadMyBookings());
 
-function refreshAfterBooking(showtimeId: string) {
-  refresh(BOOKINGS_KEY);
-  refresh(seatMapKey(showtimeId));
-  refresh(SEATS_LEFT);
+async function refreshAfterBooking(showtimeId: string) {
+  await Promise.all([refresh(BOOKINGS_KEY), refresh(seatMapKey(showtimeId)), refresh(SEATS_LEFT)]);
 }
 
+// Resolves once the refreshed data has landed.
 export async function bookSeats(showtimeId: string, seatIds: string[]): Promise<{ ref: string } | { error: BookingError }> {
   try {
     const { data, error } = await supabase.rpc("book_seats", { p_showtime: showtimeId, p_seats: seatIds });
     if (error) {
       const code = bookingError(error.message);
       // Someone else got there first: the cached map is stale.
-      if (code === "seats_taken") {
-        refresh(seatMapKey(showtimeId));
-        refresh(SEATS_LEFT);
-      }
+      if (code === "seats_taken") await Promise.all([refresh(seatMapKey(showtimeId)), refresh(SEATS_LEFT)]);
       return { error: code };
     }
-    refreshAfterBooking(showtimeId);
+    await refreshAfterBooking(showtimeId);
     return { ref: data as string };
   } catch {
     return { error: "network" };
   }
 }
 
+// Resolves once the refreshed bookings and seat maps have landed.
 export async function cancelBooking(ref: string): Promise<BookingError | null> {
   try {
     const { error } = await supabase.rpc("cancel_booking", { p_ref: ref });
-    if (error) return bookingError(error.message);
-    const showtime = showtimeOf.get(ref);
-    if (showtime) refreshAfterBooking(showtime);
-    else {
-      refresh(BOOKINGS_KEY);
-      refresh("seatmap:");
-      refresh(SEATS_LEFT);
+    if (error) {
+      const code = bookingError(error.message);
+      // Already cancelled or started: the cached booking is stale.
+      if (code === "booking_not_cancellable") await refresh(BOOKINGS_KEY);
+      return code;
     }
+    const showtime = showtimeOf.get(ref);
+    if (showtime) await refreshAfterBooking(showtime);
+    else await Promise.all([refresh(BOOKINGS_KEY), refresh("seatmap:"), refresh(SEATS_LEFT)]);
     return null;
   } catch {
     return "network";
