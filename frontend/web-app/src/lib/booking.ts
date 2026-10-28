@@ -1,0 +1,160 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { bookingError, bookingStatus, seatLabel, sortSeats } from "./booking-view";
+import type { BookingError, BookingStatus, SeatRef } from "./booking-view";
+import { clock, posterUrl, refresh, roomFormat, useResource } from "./catalog";
+import type { Resource } from "./catalog";
+import { MO, WD } from "./data";
+import { supabase } from "./supabase";
+
+// Seat maps, bookings and the booking actions, backed by the database functions
+// book_seats, cancel_booking, showtime_taken_seats and showtime_seats_left.
+
+export type SeatMap = { seats: SeatRef[]; taken: Set<string> };
+
+export type Booking = {
+  ref: string;
+  showtime: string;
+  movie: { id: string; title: string; poster: string | null };
+  branchName: string;
+  city: string;
+  room: string;
+  format: string;
+  startsAt: Date;
+  date: string;
+  start: string;
+  end: string;
+  price: number;
+  total: number;
+  status: BookingStatus;
+  upcoming: boolean;
+  tickets: { label: string; status: "confirmed" | "used" | "cancelled" }[];
+};
+
+const BOOKINGS_KEY = "bookings";
+const seatMapKey = (showtimeId: string) => `seatmap:${showtimeId}`;
+// Showtime of each loaded booking, so cancelling can refresh its seat map.
+const showtimeOf = new Map<string, string>();
+const SEATS_LEFT = "seats-left:";
+
+function check<T>({ data, error }: { data: T | null; error: { message: string } | null }): T {
+  if (error) throw new Error(error.message);
+  return data as T;
+}
+
+type SeatRow = { id: string; row_label: string; seat_number: number; seat_type: string };
+
+export async function loadSeatMap(showtimeId: string, roomId: string, db: SupabaseClient = supabase): Promise<SeatMap> {
+  const [seats, taken] = await Promise.all([
+    db.from("seat").select("id, row_label, seat_number, seat_type").eq("room_id", roomId).then(check),
+    db.rpc("showtime_taken_seats", { p_showtime: showtimeId }).then(check),
+  ]);
+  return {
+    seats: sortSeats(
+      (seats as SeatRow[]).map((s) => ({ id: s.id, row: s.row_label, number: s.seat_number, vip: s.seat_type === "vip" })),
+    ),
+    taken: new Set(taken as string[]),
+  };
+}
+
+async function loadSeatsLeft(showtimeIds: string[]): Promise<Map<string, number>> {
+  if (!showtimeIds.length) return new Map();
+  const rows = check(await supabase.rpc("showtime_seats_left", { p_showtimes: showtimeIds })) as { showtime_id: string; seats_left: number }[];
+  return new Map(rows.map((r) => [r.showtime_id, Number(r.seats_left)]));
+}
+
+export const BOOKING_SELECT =
+  "id, showtime_id, status, total_amount, reserved_at, showtime(starts_at, ends_at, price, movie(id, title, poster_path), room(name, room_type, screen_type, branch(name, city))), ticket(status, seat(row_label, seat_number))";
+
+type BookingRow = {
+  id: string;
+  showtime_id: string;
+  ref: string;
+  status: string;
+  total_amount: number;
+  showtime: {
+    starts_at: string;
+    ends_at: string;
+    price: number;
+    movie: { id: string; title: string; poster_path: string | null };
+    room: { name: string; room_type: string; screen_type: string; branch: { name: string; city: string } };
+  };
+  ticket: { status: Booking["tickets"][number]["status"]; seat: { row_label: string; seat_number: number } }[];
+};
+
+export function toBooking(r: BookingRow, now = new Date()): Booking {
+  const st = r.showtime;
+  const startsAt = new Date(st.starts_at);
+  return {
+    ref: r.ref,
+    showtime: r.showtime_id,
+    movie: { id: st.movie.id, title: st.movie.title, poster: st.movie.poster_path ? posterUrl(st.movie.poster_path) : null },
+    branchName: st.room.branch.name,
+    city: st.room.branch.city,
+    room: st.room.name,
+    format: roomFormat(st.room.room_type, st.room.screen_type),
+    startsAt,
+    date: `${WD[startsAt.getDay()]} ${startsAt.getDate()} ${MO[startsAt.getMonth()]}`,
+    start: clock(startsAt),
+    end: clock(new Date(st.ends_at)),
+    price: Number(st.price),
+    total: Number(r.total_amount),
+    ...bookingStatus(r.status, startsAt, now),
+    tickets: sortSeats(
+      r.ticket.map((t) => ({ row: t.seat.row_label, number: t.seat.seat_number, status: t.status })),
+    ).map((t) => ({ label: seatLabel(t), status: t.status })),
+  };
+}
+
+export async function loadMyBookings(db: SupabaseClient = supabase): Promise<Booking[]> {
+  const rows = check(
+    await db.from("reservation").select(`ref, ${BOOKING_SELECT}`).order("reserved_at", { ascending: false }),
+  ) as unknown as BookingRow[];
+  const now = new Date();
+  const bookings = rows.map((r) => toBooking(r, now));
+  for (const b of bookings) showtimeOf.set(b.ref, b.showtime);
+  return bookings;
+}
+
+export const useSeatMap = (showtimeId: string, roomId: string): Resource<SeatMap> =>
+  useResource(seatMapKey(showtimeId), () => loadSeatMap(showtimeId, roomId));
+
+export const useSeatsLeft = (showtimeIds: string[]): Resource<Map<string, number>> => {
+  const ids = [...showtimeIds].sort();
+  return useResource(SEATS_LEFT + ids.join(","), () => loadSeatsLeft(ids));
+};
+
+export const useMyBookings = (): Resource<Booking[]> => useResource(BOOKINGS_KEY, () => loadMyBookings());
+
+function refreshAfterBooking(showtimeId: string) {
+  refresh(BOOKINGS_KEY);
+  refresh(seatMapKey(showtimeId));
+  refresh(SEATS_LEFT);
+}
+
+export async function bookSeats(showtimeId: string, seatIds: string[]): Promise<{ ref: string } | { error: BookingError }> {
+  try {
+    const { data, error } = await supabase.rpc("book_seats", { p_showtime: showtimeId, p_seats: seatIds });
+    if (error) return { error: bookingError(error.message) };
+    refreshAfterBooking(showtimeId);
+    return { ref: data as string };
+  } catch {
+    return { error: "network" };
+  }
+}
+
+export async function cancelBooking(ref: string): Promise<BookingError | null> {
+  try {
+    const { error } = await supabase.rpc("cancel_booking", { p_ref: ref });
+    if (error) return bookingError(error.message);
+    const showtime = showtimeOf.get(ref);
+    if (showtime) refreshAfterBooking(showtime);
+    else {
+      refresh(BOOKINGS_KEY);
+      refresh("seatmap:");
+      refresh(SEATS_LEFT);
+    }
+    return null;
+  } catch {
+    return "network";
+  }
+}

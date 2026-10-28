@@ -71,7 +71,7 @@ export const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-const clock = (d: Date) => String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+export const clock = (d: Date) => String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 const languages = new Intl.DisplayNames(["en"], { type: "language" });
@@ -94,6 +94,7 @@ const releaseLabel = (iso: string | null) => {
 export const posterUrl = (path: string, size = "w500") => IMAGE_BASE + size + path;
 
 const FORMATS: Record<string, string> = { "standard 2D": "Standard 2D", "standard 3D": "Standard 3D", "vip 2D": "VIP", "imax IMAX": "IMAX" };
+export const roomFormat = (roomType: string, screenType: string) => FORMATS[`${roomType} ${screenType}`] ?? screenType;
 
 type MovieRow = {
   id: string;
@@ -215,7 +216,7 @@ async function loadCatalog(): Promise<Catalog> {
         branch: r.branch_id,
         name: r.name,
         kind: r.room_type,
-        format: FORMATS[`${r.room_type} ${r.screen_type}`] ?? r.screen_type,
+        format: roomFormat(r.room_type, r.screen_type),
         rows: Math.min(25, Math.ceil(r.capacity / 10)),
       },
     ]),
@@ -388,7 +389,7 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l);
 }
 
-function useResource<T>(key: string | null, load: () => Promise<T>): Resource<T> {
+export function useResource<T>(key: string | null, load: () => Promise<T>): Resource<T> {
   const res = useSyncExternalStore(
     subscribe,
     () => (key ? (cache.get(key) as Resource<T>) : undefined) ?? EMPTY,

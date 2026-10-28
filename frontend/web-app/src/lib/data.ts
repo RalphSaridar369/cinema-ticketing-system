@@ -25,8 +25,8 @@ export const seatSort = (a: string[]) =>
 
 export type Day = { index: number; weekday: string; date: number; label: string };
 
-const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // The booking window: today plus the next six days. Only call from client code.
 export function getDays(): Day[] {
