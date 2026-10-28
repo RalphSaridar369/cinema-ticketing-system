@@ -1,16 +1,14 @@
 import type { Session } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
 import { TASTE_KEY, refresh } from "./catalog";
-import type { Booking } from "./data";
 import { supabase } from "./supabase";
 import { STORAGE_KEY as KEY, applyTheme, type Theme } from "./theme";
 
 export type { Theme };
 
 // Client app state, persisted to localStorage. Auth, the profile, favorites,
-// watchlist and ratings come from Supabase (the saved copy only bridges the
-// moment before the session loads); bookings and preferences still live only
-// here.
+// watchlist, ratings and bookings come from Supabase (the saved copy only
+// bridges the moment before the session loads); preferences live only here.
 
 export type Profile = {
   first: string;
@@ -39,7 +37,6 @@ export type AppState = {
   // False until lists and ratings saved by earlier builds, which kept them only
   // in this browser, have been copied to the account.
   listsSynced: boolean;
-  bookings: Booking[];
   theme: Theme;
 };
 
@@ -57,7 +54,6 @@ const initial = (): AppState => ({
   watchlist: [],
   ratings: {},
   listsSynced: false,
-  bookings: [],
   theme: "dark",
 });
 
@@ -85,7 +81,6 @@ function fromMockIds(saved: Partial<AppState>): Partial<AppState> {
     favorites: ids(saved.favorites),
     watchlist: ids(saved.watchlist),
     ratings: Object.fromEntries(Object.entries(saved.ratings ?? {}).filter(([k]) => !/^\d+$/.test(k))),
-    bookings: (saved.bookings ?? []).filter((b) => typeof b.movie === "string" && typeof b.title === "string"),
   };
 }
 
@@ -296,9 +291,6 @@ export const actions = {
           return { ratings };
         }),
     );
-  },
-  addBooking(b: Booking) {
-    setState((s) => ({ bookings: [b, ...s.bookings] }));
   },
 };
 

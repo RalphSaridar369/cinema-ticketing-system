@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { bookingError, bookingStatus, seatLabel, sortSeats } from "./booking-view";
 import type { BookingError, BookingStatus, SeatRef } from "./booking-view";
-import { clock, posterUrl, refresh, roomFormat, useResource } from "./catalog";
+import { clock, refresh, roomFormat, useResource } from "./catalog";
 import type { Resource } from "./catalog";
 import { MO, WD } from "./data";
 import { supabase } from "./supabase";
@@ -11,6 +11,7 @@ import { supabase } from "./supabase";
 
 export type SeatMap = { seats: SeatRef[]; taken: Set<string> };
 
+// `movie.poster` is a TMDB path, like Movie.poster; render it with Poster.
 export type Booking = {
   ref: string;
   showtime: string;
@@ -31,6 +32,7 @@ export type Booking = {
 };
 
 const BOOKINGS_KEY = "bookings";
+export const bookingsKey = (userId: string) => `${BOOKINGS_KEY}:${userId}`;
 export const seatMapKey = (showtimeId: string) => `seatmap:${showtimeId}`;
 // Showtime of each loaded booking, so cancelling can refresh its seat map.
 const showtimeOf = new Map<string, string>();
@@ -86,7 +88,7 @@ export function toBooking(r: BookingRow, now = new Date()): Booking {
   return {
     ref: r.ref,
     showtime: r.showtime_id,
-    movie: { id: st.movie.id, title: st.movie.title, poster: st.movie.poster_path ? posterUrl(st.movie.poster_path) : null },
+    movie: { id: st.movie.id, title: st.movie.title, poster: st.movie.poster_path },
     branchName: st.room.branch.name,
     city: st.room.branch.city,
     room: st.room.name,
@@ -124,7 +126,7 @@ export const useSeatsLeft = (showtimeIds: string[]): Resource<Map<string, number
 
 // Keyed by user so a second sign-in in the same page session never sees the first user's bookings.
 export const useMyBookings = (userId: string | null): Resource<Booking[]> =>
-  useResource(userId && `${BOOKINGS_KEY}:${userId}`, () => loadMyBookings());
+  useResource(userId && bookingsKey(userId), () => loadMyBookings());
 
 function refreshAfterBooking(showtimeId: string) {
   refresh(BOOKINGS_KEY);
