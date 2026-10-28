@@ -68,7 +68,7 @@ function Details({ m, c }: { m: MovieDetail; c: Catalog }) {
     <>
       <title>{m.title}</title>
       <div className="backdrop relative h-[clamp(230px,26vw,400px)]">
-        {m.backdrop && <Image src={posterUrl(m.backdrop, "w1280")} alt="" fill priority sizes="100vw" className="object-cover" />}
+        {m.backdrop && <Image src={posterUrl(m.backdrop, "w1280")} alt="" fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover" />}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-40% to-bg" />
         <button
           onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}

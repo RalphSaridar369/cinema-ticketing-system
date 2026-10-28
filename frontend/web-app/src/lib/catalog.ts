@@ -306,6 +306,32 @@ async function loadExplorePage(f: ExploreFilters, page: number): Promise<Explore
   return { movies: (data as unknown as MovieRow[]).map((r) => toMovie(r, names)), total: count ?? 0 };
 }
 
+export type Featured = { title: string; backdrop: string };
+
+// Backdrops of the 5 most popular movies playing in the next 24 hours, in a
+// random order, for the sign-in screens (the catalogue is readable without
+// logging in). Two small queries: one request joining showtime to movie times
+// out, because showtime.movie_id has no index.
+async function loadFeatured(): Promise<Featured[]> {
+  const now = new Date();
+  const until = new Date(now.getTime() + 86_400_000);
+  const rows = check(
+    await supabase.from("showtime").select("movie_id").gte("starts_at", now.toISOString()).lt("starts_at", until.toISOString()).limit(PAGE),
+  );
+  const ids = [...new Set(rows.map((r) => r.movie_id as string))].slice(0, ID_CHUNK);
+  if (!ids.length) return [];
+  const movies = check(
+    await supabase.from("movie").select("title, backdrop_path").in("id", ids).not("backdrop_path", "is", null).order("popularity", { ascending: false }).limit(5),
+  );
+  const featured = movies.map((m) => ({ title: m.title as string, backdrop: m.backdrop_path as string }));
+  // Shuffled here, in the browser: random values aren't allowed while pages prerender.
+  for (let i = featured.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [featured[i], featured[j]] = [featured[j], featured[i]];
+  }
+  return featured;
+}
+
 // Genre weights from what the signed-in user has clicked, viewed, saved or shared.
 async function loadTaste(): Promise<Map<string, number>> {
   const rows = check(
@@ -378,6 +404,7 @@ export const CATALOG_KEY = "catalog";
 
 export const useCatalog = () => useResource(CATALOG_KEY, loadCatalog);
 export const useMovieDetail = (id: string) => useResource(`movie:${id}`, () => loadMovieDetail(id));
+export const useFeatured = () => useResource("featured", loadFeatured);
 export const GENRES_KEY = "genres";
 export const useGenres = () => useResource(GENRES_KEY, loadGenres);
 export const exploreKey = (f: ExploreFilters, page: number) => `explore:${f.sort}|${f.genre ?? ""}|${page}|${f.q}`;
