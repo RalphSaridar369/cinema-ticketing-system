@@ -332,16 +332,25 @@ async function loadFeatured(): Promise<Featured[]> {
   return featured;
 }
 
-// Genre weights from what the signed-in user has clicked, viewed, saved or shared.
+// Genre weights from the signed-in user's favorites and watchlist (2 each)
+// and recent clicks, views and shares (1 each). Lists come from saved_movie,
+// not from the favorite and watchlist events in the log, so a movie removed
+// from a list stops counting.
 async function loadTaste(): Promise<Map<string, number>> {
-  const rows = check(
-    await supabase.from("user_movie_interaction").select("movie_id, interaction_type").order("created_at", { ascending: false }).limit(300),
-  );
+  const [saved, events] = await Promise.all([
+    supabase.from("saved_movie").select("movie_id").then(check),
+    supabase
+      .from("user_movie_interaction")
+      .select("movie_id")
+      .not("interaction_type", "in", "(favorite,watchlist)")
+      .order("created_at", { ascending: false })
+      .limit(300)
+      .then(check),
+  ]);
   const weight = new Map<string, number>();
-  for (const r of rows) {
-    const w = r.interaction_type === "favorite" || r.interaction_type === "watchlist" ? 2 : 1;
-    weight.set(r.movie_id, (weight.get(r.movie_id) ?? 0) + w);
-  }
+  const add = (id: string, w: number) => weight.set(id, (weight.get(id) ?? 0) + w);
+  for (const r of saved) add(r.movie_id, 2);
+  for (const r of events) add(r.movie_id, 1);
   const taste = new Map<string, number>();
   if (!weight.size) return taste;
   for (const m of await loadMovies([...weight.keys()], await loadGenres()))
@@ -359,9 +368,11 @@ const inflight = new Set<string>();
 const listeners = new Set<() => void>();
 const EMPTY: Resource<never> = {};
 
-function fetchInto<T>(key: string, load: () => Promise<T>) {
+// `force` reloads a key that already has data, keeping the old data on
+// screen until the new load lands.
+function fetchInto<T>(key: string, load: () => Promise<T>, force = false) {
   loaders.set(key, load);
-  if (inflight.has(key) || cache.has(key)) return;
+  if (inflight.has(key) || (cache.has(key) && !force)) return;
   inflight.add(key);
   load()
     .then((data) => cache.set(key, { data }))
@@ -400,6 +411,13 @@ export function retry(key: string) {
   fetchInto(key, load);
 }
 
+// Reloads every cached load whose key starts with `prefix`.
+export function refresh(prefix: string) {
+  for (const [key, load] of loaders) if (key.startsWith(prefix)) fetchInto(key, load, true);
+}
+
+export const TASTE_KEY = "taste:";
+
 export const CATALOG_KEY = "catalog";
 
 export const useCatalog = () => useResource(CATALOG_KEY, loadCatalog);
@@ -410,7 +428,7 @@ export const useGenres = () => useResource(GENRES_KEY, loadGenres);
 export const exploreKey = (f: ExploreFilters, page: number) => `explore:${f.sort}|${f.genre ?? ""}|${page}|${f.q}`;
 export const useExplorePage = (f: ExploreFilters, page: number) => useResource(exploreKey(f, page), () => loadExplorePage(f, page));
 export const useMoviesById = (ids: string[]) => useResource(`movies:${ids.join(",")}`, () => loadMoviesById(ids));
-export const useTaste = (userKey: string | null) => useResource(userKey && `taste:${userKey}`, loadTaste);
+export const useTaste = (userKey: string | null) => useResource(userKey && `${TASTE_KEY}${userKey}`, loadTaste);
 
 export const branchById = (c: Catalog, id: string | null) => (id == null ? null : (c.branches.find((b) => b.id === id) ?? null));
 export const branchBySlug = (c: Catalog, slug: string) => c.branches.find((b) => b.slug === slug) ?? null;
