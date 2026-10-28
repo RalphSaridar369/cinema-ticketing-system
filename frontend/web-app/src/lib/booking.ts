@@ -62,13 +62,12 @@ async function loadSeatsLeft(showtimeIds: string[]): Promise<Map<string, number>
   return new Map(rows.map((r) => [r.showtime_id, Number(r.seats_left)]));
 }
 
-export const BOOKING_SELECT =
-  "id, showtime_id, status, total_amount, reserved_at, showtime(starts_at, ends_at, price, movie(id, title, poster_path), room(name, room_type, screen_type, branch(name, city))), ticket(status, seat(row_label, seat_number))";
+const BOOKING_SELECT =
+  "ref, showtime_id, status, total_amount, showtime(starts_at, ends_at, price, movie(id, title, poster_path), room(name, room_type, screen_type, branch(name, city))), ticket(status, seat(row_label, seat_number))";
 
 type BookingRow = {
-  id: string;
-  showtime_id: string;
   ref: string;
+  showtime_id: string;
   status: string;
   total_amount: number;
   showtime: {
@@ -107,7 +106,7 @@ export function toBooking(r: BookingRow, now = new Date()): Booking {
 
 export async function loadMyBookings(db: SupabaseClient = supabase): Promise<Booking[]> {
   const rows = check(
-    await db.from("reservation").select(`ref, ${BOOKING_SELECT}`).order("reserved_at", { ascending: false }),
+    await db.from("reservation").select(BOOKING_SELECT).order("reserved_at", { ascending: false }),
   ) as unknown as BookingRow[];
   const now = new Date();
   const bookings = rows.map((r) => toBooking(r, now));
@@ -123,7 +122,9 @@ export const useSeatsLeft = (showtimeIds: string[]): Resource<Map<string, number
   return useResource(SEATS_LEFT + ids.join(","), () => loadSeatsLeft(ids));
 };
 
-export const useMyBookings = (): Resource<Booking[]> => useResource(BOOKINGS_KEY, () => loadMyBookings());
+// Keyed by user so a second sign-in in the same page session never sees the first user's bookings.
+export const useMyBookings = (userId: string | null): Resource<Booking[]> =>
+  useResource(userId && `${BOOKINGS_KEY}:${userId}`, () => loadMyBookings());
 
 function refreshAfterBooking(showtimeId: string) {
   refresh(BOOKINGS_KEY);
