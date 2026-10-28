@@ -135,7 +135,15 @@ function refreshAfterBooking(showtimeId: string) {
 export async function bookSeats(showtimeId: string, seatIds: string[]): Promise<{ ref: string } | { error: BookingError }> {
   try {
     const { data, error } = await supabase.rpc("book_seats", { p_showtime: showtimeId, p_seats: seatIds });
-    if (error) return { error: bookingError(error.message) };
+    if (error) {
+      const code = bookingError(error.message);
+      // Someone else got there first: the cached map is stale.
+      if (code === "seats_taken") {
+        refresh(seatMapKey(showtimeId));
+        refresh(SEATS_LEFT);
+      }
+      return { error: code };
+    }
     refreshAfterBooking(showtimeId);
     return { ref: data as string };
   } catch {

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { BackLink, LoadError, NotFoundNote, ScreenFallback } from "@/components/ui";
 import { seatMapKey, useSeatMap, type SeatMap as Seats } from "@/lib/booking";
 import { seatLabel, sortSeats } from "@/lib/booking-view";
-import { CATALOG_KEY, branchById, retry, showtimeById, useCatalog, type Branch, type Movie, type Showtime } from "@/lib/catalog";
+import { CATALOG_KEY, branchById, refresh, retry, showtimeById, useCatalog, type Branch, type Movie, type Showtime } from "@/lib/catalog";
 import { MAX_SEATS, ROW_LETTERS, getDays, money, ticketCount } from "@/lib/data";
 import { say } from "@/lib/store";
 
@@ -29,6 +29,8 @@ export function SeatSelection({ params }: { params: Promise<{ showtime: string }
 
 function SeatLoader({ st, m, b }: { st: Showtime; m: Movie; b: Branch }) {
   const map = useSeatMap(st.id, st.room.id);
+  // A cached map may be stale: show it now, replace it with fresh data.
+  useEffect(() => refresh(seatMapKey(st.id)), [st.id]);
   if (map.error)
     return (
       <div className="px-page pt-10">
@@ -43,9 +45,12 @@ function SeatLoader({ st, m, b }: { st: Showtime; m: Movie; b: Branch }) {
 }
 
 function SeatPicker({ st, m, b, map }: { st: Showtime; m: Movie; b: Branch; map: Seats }) {
-  const [sel, setSel] = useState<string[]>([]);
+  const [picked, setSel] = useState<string[]>([]);
   const [zoom, setZoom] = useState(1);
   const free = map.seats.length - map.taken.size;
+  // Seats taken since they were picked (after a refresh) drop out of the selection.
+  const takenLabels = new Set(map.seats.filter((x) => map.taken.has(x.id)).map(seatLabel));
+  const sel = picked.filter((l) => !takenLabels.has(l));
   const sorted = sortSeats(sel.map((l) => ({ label: l, row: l[0], number: Number(l.slice(1)) }))).map((x) => x.label);
   const n = sel.length;
   const total = money(st.price * n);
