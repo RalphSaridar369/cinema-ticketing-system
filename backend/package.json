@@ -42,6 +42,7 @@
     "write-to-json:genres": "npx tsx src/scripts/write_to_json/write_genres_into_json.ts",
     
     "write-to-json:all": "npm run write-to-json:users && npm run write-to-json:branches-and-rooms && npm run write-to-json:seats && npm run write-to-json:movies && npm run write-to-json:genres && npm run write-to-json:genres-movies && npm run write-to-json:movies-showtime && npm run write-to-json:reservations && npm run write-to-json:tickets && npm run write-to-json:movie-ratings && npm run write-to-json:user-movie-interaction",
+    "test:booking": "npx tsx --test src/scripts/tests/booking_rpc_test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
