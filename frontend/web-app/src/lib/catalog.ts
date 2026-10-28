@@ -408,6 +408,9 @@ export function useResource<T>(key: string | null, load: () => Promise<T>): Reso
   return res;
 }
 
+// Whether a load for `key` has already landed.
+export const hasCached = (key: string) => cache.has(key);
+
 // Runs a failed load again.
 export function retry(key: string) {
   const load = loaders.get(key);

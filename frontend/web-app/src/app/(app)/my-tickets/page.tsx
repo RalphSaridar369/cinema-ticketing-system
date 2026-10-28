@@ -16,7 +16,9 @@ export default function MyTicketsPage() {
   const [tab, setTab] = useState<Tab>("upcoming");
   const bookHref = useBookHref(s);
   const bookings = useMyBookings(s.userId);
+  // Upcoming: soonest showtime first; Past keeps the loaded newest-first order.
   const list = (bookings.data ?? []).filter((b) => b.upcoming === (tab === "upcoming"));
+  if (tab === "upcoming") list.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
   return (
     <div className="px-page flex flex-col gap-[18px] pb-10 pt-4">

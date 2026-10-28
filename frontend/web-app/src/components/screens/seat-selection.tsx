@@ -5,7 +5,7 @@ import { use, useEffect, useState } from "react";
 import { BackLink, LoadError, NotFoundNote, ScreenFallback } from "@/components/ui";
 import { seatMapKey, useSeatMap, type SeatMap as Seats } from "@/lib/booking";
 import { seatLabel, sortSeats } from "@/lib/booking-view";
-import { CATALOG_KEY, branchById, refresh, retry, showtimeById, useCatalog, type Branch, type Movie, type Showtime } from "@/lib/catalog";
+import { CATALOG_KEY, branchById, hasCached, refresh, retry, showtimeById, useCatalog, type Branch, type Movie, type Showtime } from "@/lib/catalog";
 import { MAX_SEATS, ROW_LETTERS, getDays, money, ticketCount } from "@/lib/data";
 import { say } from "@/lib/store";
 
@@ -28,11 +28,13 @@ export function SeatSelection({ params }: { params: Promise<{ showtime: string }
 }
 
 function SeatLoader({ st, m, b }: { st: Showtime; m: Movie; b: Branch }) {
+  // Read before useSeatMap starts a first load, so only a cached map gets a second one.
+  const [cached] = useState(() => hasCached(seatMapKey(st.id)));
   const map = useSeatMap(st.id, st.room.id);
   // A cached map may be stale: show it now, replace it with fresh data.
   useEffect(() => {
-    void refresh(seatMapKey(st.id));
-  }, [st.id]);
+    if (cached) void refresh(seatMapKey(st.id));
+  }, [st.id, cached]);
   if (map.error)
     return (
       <div className="px-page pt-10">

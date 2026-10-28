@@ -4,6 +4,7 @@ import type { BookingError, BookingStatus, SeatRef } from "./booking-view";
 import { clock, refresh, roomFormat, useResource } from "./catalog";
 import type { Resource } from "./catalog";
 import { MO, WD } from "./data";
+import { getState } from "./store";
 import { supabase } from "./supabase";
 
 // Seat maps, bookings and the booking actions, backed by the database functions
@@ -31,8 +32,7 @@ export type Booking = {
   tickets: { label: string; status: "confirmed" | "used" | "cancelled" }[];
 };
 
-const BOOKINGS_KEY = "bookings";
-export const bookingsKey = (userId: string) => `${BOOKINGS_KEY}:${userId}`;
+export const bookingsKey = (userId: string) => `bookings:${userId}`;
 export const seatMapKey = (showtimeId: string) => `seatmap:${showtimeId}`;
 // Showtime of each loaded booking, so cancelling can refresh its seat map.
 const showtimeOf = new Map<string, string>();
@@ -106,9 +106,10 @@ export function toBooking(r: BookingRow, now = new Date()): Booking {
   };
 }
 
-export async function loadMyBookings(db: SupabaseClient = supabase): Promise<Booking[]> {
+// Filtered by user so a reload under another session returns [] rather than that session's rows.
+export async function loadMyBookings(userId: string, db: SupabaseClient = supabase): Promise<Booking[]> {
   const rows = check(
-    await db.from("reservation").select(BOOKING_SELECT).order("reserved_at", { ascending: false }),
+    await db.from("reservation").select(BOOKING_SELECT).eq("user_id", userId).order("reserved_at", { ascending: false }),
   ) as unknown as BookingRow[];
   const now = new Date();
   const bookings = rows.map((r) => toBooking(r, now));
@@ -126,10 +127,16 @@ export const useSeatsLeft = (showtimeIds: string[]): Resource<Map<string, number
 
 // Keyed by user so a second sign-in in the same page session never sees the first user's bookings.
 export const useMyBookings = (userId: string | null): Resource<Booking[]> =>
-  useResource(userId && bookingsKey(userId), () => loadMyBookings());
+  useResource(userId && bookingsKey(userId), () => loadMyBookings(userId!));
+
+// Only the signed-in user's bookings are reloaded.
+const refreshBookings = () => {
+  const { userId } = getState();
+  return userId ? refresh(bookingsKey(userId)) : Promise.resolve();
+};
 
 async function refreshAfterBooking(showtimeId: string) {
-  await Promise.all([refresh(BOOKINGS_KEY), refresh(seatMapKey(showtimeId)), refresh(SEATS_LEFT)]);
+  await Promise.all([refreshBookings(), refresh(seatMapKey(showtimeId)), refresh(SEATS_LEFT)]);
 }
 
 // Resolves once the refreshed data has landed.
@@ -156,12 +163,12 @@ export async function cancelBooking(ref: string): Promise<BookingError | null> {
     if (error) {
       const code = bookingError(error.message);
       // Already cancelled or started: the cached booking is stale.
-      if (code === "booking_not_cancellable") await refresh(BOOKINGS_KEY);
+      if (code === "booking_not_cancellable") await refreshBookings();
       return code;
     }
     const showtime = showtimeOf.get(ref);
     if (showtime) await refreshAfterBooking(showtime);
-    else await Promise.all([refresh(BOOKINGS_KEY), refresh("seatmap:"), refresh(SEATS_LEFT)]);
+    else await Promise.all([refreshBookings(), refresh("seatmap:"), refresh(SEATS_LEFT)]);
     return null;
   } catch {
     return "network";

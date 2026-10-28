@@ -40,6 +40,8 @@ function Review({ st, m, b, labels }: { st: Showtime; m: Movie; b: Branch; label
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
   const [lost, setLost] = useState(false);
+  // Errors where retrying cannot work.
+  const [dead, setDead] = useState<"showtime_unavailable" | "invalid_seats" | null>(null);
   const map = useSeatMap(st.id, st.room.id);
   if (map.error)
     return (
@@ -52,6 +54,8 @@ function Review({ st, m, b, labels }: { st: Showtime; m: Movie; b: Branch; label
   const { taken } = map.data;
   const resolved = seatsFromLabels(labels, map.data.seats);
   const valid = resolved && resolved.length > 0 && resolved.length <= MAX_SEATS && resolved.every((x) => !taken.has(x.id));
+  if (dead === "showtime_unavailable") return <NotFoundNote title="This showtime has already started" href="/branches" cta="Pick another showtime" />;
+  if (dead === "invalid_seats") return <NotFoundNote title="Those seats aren’t available" href={`/book/${st.id}`} cta="Choose seats again" />;
   if (lost) return <NotFoundNote title="Those seats were just taken" href={`/book/${st.id}`} cta="Choose seats again" />;
   // While confirming, a refreshed seat map marks our own seats taken; keep the page until the redirect.
   if (!resolved || (!valid && !pending)) return <NotFoundNote title="Those seats aren’t available" href={`/book/${st.id}`} cta="Choose seats again" />;
@@ -68,6 +72,7 @@ function Review({ st, m, b, labels }: { st: Showtime; m: Movie; b: Branch; label
     if ("ref" in res) return router.replace(`/tickets/${res.ref}?new=1`);
     setPending(false);
     if (res.error === "seats_taken") setLost(true);
+    else if (res.error === "showtime_unavailable" || res.error === "invalid_seats") setDead(res.error);
     else setFailed(true);
   };
 
