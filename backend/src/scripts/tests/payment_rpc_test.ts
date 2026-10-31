@@ -267,9 +267,9 @@ test("expire_holds expires holds past their time", async () => {
   const h = await mustHold(userA, seats);
   await expireNow(h.reservation_id);
 
-  const { data: count, error } = await service.rpc("expire_holds");
+  // pg_cron may get there first, so the count isn't asserted.
+  const { error } = await service.rpc("expire_holds");
   assert.equal(error, null);
-  assert.ok(count >= 1);
 
   const reservation = await readReservation(h.reservation_id);
   assert.equal(reservation.status, "expired");
@@ -453,7 +453,33 @@ test("users read only their own payments", async () => {
   assert.equal(error, null);
   assert.equal(own!.length, 1);
 
-  const { data, error: otherError } = await userB.from("payment").select("id");
+  const b = await mustHold(userB, takeFreeSeats(1));
+  const bSession = await createPayment(b.reservation_id);
+  const { data, error: otherError } = await userB.from("payment").select("stripe_checkout_session_id");
   assert.equal(otherError, null);
-  assert.deepEqual(data, []);
+  assert.deepEqual(data, [{ stripe_checkout_session_id: bSession }]);
+});
+
+test("create_payment needs a pending hold", async () => {
+  const h = await mustHold(userA, takeFreeSeats(1));
+  await createPayment(h.reservation_id);
+  const { error: dupError } = await service.rpc("create_payment", {
+    p_reservation: h.reservation_id,
+    p_session_id: `cs_test_fake_${randomUUID()}`,
+  });
+  assert.ok(dupError, "a second pending payment should be refused");
+
+  const { error: releaseError } = await userA.rpc("release_hold", { p_ref: h.ref });
+  assert.equal(releaseError, null);
+  const { error } = await service.rpc("create_payment", {
+    p_reservation: h.reservation_id,
+    p_session_id: `cs_test_fake_${randomUUID()}`,
+  });
+  assert.equal(error?.message, "hold_expired");
+
+  const { error: missing } = await service.rpc("create_payment", {
+    p_reservation: randomUUID(),
+    p_session_id: `cs_test_fake_${randomUUID()}`,
+  });
+  assert.equal(missing?.message, "booking_not_found");
 });

@@ -4,7 +4,8 @@
 -- unpaid hold expires: when someone holds again, on a one-minute pg_cron job,
 -- or when Stripe reports the checkout session expired.
 --
--- Same error convention as the booking functions, plus payment_not_found.
+-- Same error convention as the booking functions, plus payment_not_found and
+-- hold_expired.
 --
 -- Locks are always taken reservation first, then payment, so the webhook,
 -- the expiry paths and cancellation can't deadlock.
@@ -49,12 +50,17 @@ create table payment (
 
 create index payment_reservation_id_idx on payment(reservation_id);
 
+-- One checkout session at a time per reservation.
+create unique index payment_reservation_id_pending_key
+on payment(reservation_id)
+where status = 'pending';
+
 -- Users read their own payments; only the functions below write.
 alter table payment enable row level security;
 create policy "read own payments" on payment for select to authenticated
     using (user_id = auth.uid());
-revoke all on payment from anon;
-revoke insert, update, delete on payment from authenticated;
+revoke all on public.payment from anon, authenticated;
+grant select on public.payment to authenticated;
 
 -- Held seats count as taken for everyone but the user holding them, so the
 -- seat map keeps the holder's own seats selectable. showtime_seats_left is
@@ -274,7 +280,8 @@ create extension if not exists pg_cron;
 select cron.schedule('expire-holds', '* * * * *', $$select public.expire_holds()$$);
 
 -- Record the Stripe checkout session for a reservation (web app, service role).
--- The amount is the reservation's total, never taken from the caller.
+-- The amount is the reservation's total, never taken from the caller. Only a
+-- pending reservation can be paid for: hold_expired otherwise.
 create function public.create_payment(p_reservation uuid, p_session_id text)
 returns uuid
 language plpgsql
@@ -285,14 +292,20 @@ as $$
 declare
     v_user uuid;
     v_amount numeric;
+    v_status text;
     v_payment uuid;
 begin
-    select r.user_id, r.total_amount into v_user, v_amount
+    select r.user_id, r.total_amount, r.status into v_user, v_amount, v_status
     from public.reservation r
-    where r.id = p_reservation;
+    where r.id = p_reservation
+    for update of r;
 
     if not found then
         raise exception 'booking_not_found';
+    end if;
+
+    if v_status <> 'pending' then
+        raise exception 'hold_expired';
     end if;
 
     insert into public.payment (reservation_id, user_id, amount, status, stripe_checkout_session_id)
