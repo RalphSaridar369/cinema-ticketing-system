@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bookingStatus, bookingError, sortSeats, seatsFromLabels, seatLabel, type SeatRef } from "./booking-view";
+import { bookingStatus, bookingVisible, bookingError, sortSeats, seatsFromLabels, seatLabel, type SeatRef } from "./booking-view";
 
 const now = new Date("2026-06-01T12:00:00Z");
 const future = new Date("2026-06-02T12:00:00Z");
@@ -11,10 +11,23 @@ test("bookingStatus", () => {
   assert.deepEqual(bookingStatus("confirmed", future, now), { status: "Confirmed", upcoming: true });
   assert.deepEqual(bookingStatus("confirmed", past, now), { status: "Completed", upcoming: false });
   assert.deepEqual(bookingStatus("completed", past, now), { status: "Completed", upcoming: false });
+  assert.deepEqual(bookingStatus("expired", future, now), { status: "Refunded", upcoming: false });
+});
+
+test("bookingVisible", () => {
+  assert.equal(bookingVisible("pending", null), false);
+  assert.equal(bookingVisible("expired", null), false);
+  assert.equal(bookingVisible("expired", "expired"), false);
+  assert.equal(bookingVisible("expired", "refunded"), true);
+  assert.equal(bookingVisible("expired", "refunding"), true);
+  assert.equal(bookingVisible("confirmed", null), true);
+  assert.equal(bookingVisible("cancelled", "refunded"), true);
 });
 
 test("bookingError", () => {
   assert.equal(bookingError("seats_taken"), "seats_taken");
+  assert.equal(bookingError("refund_pending"), "refund_pending");
+  assert.equal(bookingError("hold_expired"), "hold_expired");
   assert.equal(bookingError("JWT expired"), "network");
   assert.equal(bookingError(undefined), "network");
 });

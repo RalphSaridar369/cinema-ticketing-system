@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-shell";
-import { BackLink, LoadError, Modal, NotFoundNote, ScreenFallback } from "@/components/ui";
-import { bookingsKey, cancelBooking, useMyBookings, type Booking } from "@/lib/booking";
+import { BackLink, LoadError, Modal, NotFoundNote, ScreenFallback, Spinner } from "@/components/ui";
+import { bookingsKey, cancelBooking, confirmCheckout, useMyBookings, type Booking } from "@/lib/booking";
 import { refresh, retry } from "@/lib/catalog";
 import { money, ticketCount } from "@/lib/data";
 import { say } from "@/lib/store";
@@ -20,18 +20,46 @@ const GAP = 16;
 export function Tickets({ params, searchParams }: Props) {
   const s = useApp();
   const { ref } = use(params);
-  const justBooked = use(searchParams).new === "1";
+  const query = use(searchParams);
+  const justBooked = query.new === "1";
+  const sessionId = typeof query.session_id === "string" ? query.session_id : null;
   const [i, setI] = useState(0);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [refundPending, setRefundPending] = useState(false);
+  // Outcome of the Stripe return: null while unknown, "pending" while polling, "timeout" after 30 s.
+  const [outcome, setOutcome] = useState<"confirmed" | "refunded" | "pending" | "timeout" | "error" | null>(null);
+  const confirmed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!sessionId || confirmed.current === sessionId) return;
+    confirmed.current = sessionId;
+    let live = true;
+    const started = Date.now();
+    const poll = async () => {
+      const res = await confirmCheckout(sessionId);
+      if (!live) return;
+      if (res !== "pending") return setOutcome(res);
+      if (Date.now() - started >= 30_000) return setOutcome("timeout");
+      setOutcome("pending");
+      timer = setTimeout(poll, 2000);
+    };
+    let timer: ReturnType<typeof setTimeout>;
+    void poll();
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [sessionId]);
   const bookings = useMyBookings(s.userId);
   const found = bookings.data?.some((x) => x.ref === ref);
   // The cache may predate this booking (just booked, or booked elsewhere), so
   // a missing ref gets one fresh load before it counts as not found.
   const [reloaded, setReloaded] = useState<string | null>(null);
   const reloadKey = `${s.userId}:${ref}`;
-  const reloading = !!bookings.data && !found && reloaded !== reloadKey;
+  // Not found yet while payment is settling is expected, so wait for the outcome.
+  const settling = !!sessionId && (outcome === null || outcome === "pending");
+  const reloading = !!bookings.data && !found && reloaded !== reloadKey && !settling;
   useEffect(() => {
     if (!reloading || !s.userId) return;
     let live = true;
@@ -43,6 +71,26 @@ export function Tickets({ params, searchParams }: Props) {
   if (bookings.error) return <LoadError what="this booking" onRetry={() => s.userId && retry(bookingsKey(s.userId))} />;
   if (!bookings.data || reloading) return <ScreenFallback />;
   const b = bookings.data.find((x) => x.ref === ref);
+  if (b && outcome === "refunded" && b.status === "Refunded")
+    return (
+      <NotFoundNote
+        title={`Your seat hold ran out before payment finished. You’ve been refunded ${money(b.paid ?? b.total)}.`}
+        href={`/book/${b.showtime}`}
+        cta="Choose seats again"
+      />
+    );
+  if (!b && settling)
+    return (
+      <div className="px-page flex flex-col items-center gap-3 pt-16 text-center" role="status">
+        <Spinner size={44} />
+        <h1 className="font-display text-xl font-semibold">Confirming payment</h1>
+        <span className="text-sm text-mu">This only takes a moment.</span>
+      </div>
+    );
+  if (!b && outcome === "timeout")
+    return <NotFoundNote title="Payment is still processing. Check My Tickets in a minute." href="/my-tickets" cta="Go to My Tickets" />;
+  if (!b && outcome === "refunded")
+    return <NotFoundNote title="Your seat hold ran out before payment finished. You’ve been refunded." href="/branches" cta="Pick another showtime" />;
   if (!b) return <NotFoundNote title="We couldn’t find that booking" href="/my-tickets" cta="Go to My Tickets" />;
 
   const title = b.movie.title;
@@ -52,12 +100,14 @@ export function Tickets({ params, searchParams }: Props) {
   const cancel = async () => {
     setBusy(true);
     setCancelError(null);
-    const err = await cancelBooking(b.ref);
+    const res = await cancelBooking(b.ref);
     setBusy(false);
-    if (!err) {
+    if (!("error" in res)) {
+      setRefundPending(false);
       setConfirming(false);
       say("Booking cancelled");
-    } else setCancelError(err === "booking_not_cancellable" ? "This booking can no longer be cancelled" : "Couldn’t cancel. Try again.");
+    } else if (res.error === "refund_pending") setRefundPending(true);
+    else setCancelError(res.error === "booking_not_cancellable" ? "This booking can no longer be cancelled" : "Couldn’t cancel. Try again.");
   };
 
   return (
@@ -77,6 +127,7 @@ export function Tickets({ params, searchParams }: Props) {
         <span className="text-sm text-mu">
           {ticketCount(n)} · Booking <span className="font-mono text-tx">{b.ref}</span> · {b.status}
         </span>
+        {b.refund && b.paid !== null && <span className="text-sm font-semibold text-mu">Refunded {money(b.paid)}</span>}
       </div>
 
       <div className="overflow-hidden pb-2 pt-1" aria-roledescription="carousel">
@@ -131,23 +182,39 @@ export function Tickets({ params, searchParams }: Props) {
       {confirming && (
         <Modal onClose={() => !busy && setConfirming(false)}>
           <div className="flex flex-col gap-3">
-            <h2 className="font-display text-[22px] font-semibold">Cancel booking?</h2>
-            <p className="text-[15px] leading-normal text-mu">
-              Are you sure you want to cancel this booking for <strong className="text-tx">{title}</strong> on {b.date} at {b.start}?
-            </p>
+            <h2 className="font-display text-[22px] font-semibold">{refundPending ? "Booking cancelled" : "Cancel booking?"}</h2>
+            {refundPending ? (
+              <p className="text-[15px] leading-normal text-mu">Booking cancelled. Your refund is still processing.</p>
+            ) : (
+              <p className="text-[15px] leading-normal text-mu">
+                Are you sure you want to cancel this booking for <strong className="text-tx">{title}</strong> on {b.date} at {b.start}?
+                {b.paid !== null && ` You’ll be refunded ${money(b.paid)} to your card.`}
+              </p>
+            )}
             {cancelError && (
               <p role="alert" className="text-sm font-semibold text-err">
                 {cancelError}
               </p>
             )}
-            <div className="mt-2 grid grid-cols-2 gap-2.5">
-              <button autoFocus disabled={busy} onClick={() => setConfirming(false)} className="btn h-[50px] border border-line text-[15px] font-bold">
-                Keep booking
-              </button>
-              <button disabled={busy} onClick={cancel} className="btn h-[50px] bg-err text-[15px] text-white">
-                Cancel booking
-              </button>
-            </div>
+            {refundPending ? (
+              <div className="mt-2 grid grid-cols-2 gap-2.5">
+                <button disabled={busy} onClick={() => setConfirming(false)} className="btn h-[50px] border border-line text-[15px] font-bold">
+                  Close
+                </button>
+                <button autoFocus disabled={busy} onClick={cancel} className="btn btn-gold h-[50px] text-[15px]">
+                  Retry refund
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2.5">
+                <button autoFocus disabled={busy} onClick={() => setConfirming(false)} className="btn h-[50px] border border-line text-[15px] font-bold">
+                  Keep booking
+                </button>
+                <button disabled={busy} onClick={cancel} className="btn h-[50px] bg-err text-[15px] text-white">
+                  Cancel booking
+                </button>
+              </div>
+            )}
           </div>
         </Modal>
       )}

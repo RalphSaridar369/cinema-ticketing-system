@@ -2,7 +2,7 @@
 
 import { ROW_LETTERS } from "./data";
 
-export type BookingStatus = "Confirmed" | "Completed" | "Cancelled";
+export type BookingStatus = "Confirmed" | "Completed" | "Cancelled" | "Refunded";
 
 export type BookingError =
   | "not_signed_in"
@@ -11,6 +11,9 @@ export type BookingError =
   | "seats_taken"
   | "booking_not_found"
   | "booking_not_cancellable"
+  | "payment_error"
+  | "refund_pending"
+  | "hold_expired"
   | "network";
 
 export type SeatRef = { id: string; row: string; number: number; vip: boolean };
@@ -22,8 +25,17 @@ export const bookingStatus = (
   now: Date,
 ): { status: BookingStatus; upcoming: boolean } => {
   if (reservationStatus === "cancelled") return { status: "Cancelled", upcoming: false };
+  // A hold that lapsed after payment was refunded.
+  if (reservationStatus === "expired") return { status: "Refunded", upcoming: false };
   const upcoming = reservationStatus === "confirmed" && startsAt.getTime() > now.getTime();
   return { status: upcoming ? "Confirmed" : "Completed", upcoming };
+};
+
+// Unpaid holds and abandoned checkouts stay out of the lists; refunded ones show.
+export const bookingVisible = (reservationStatus: string, paymentStatus: string | null): boolean => {
+  if (reservationStatus === "pending") return false;
+  if (reservationStatus === "expired") return paymentStatus === "refunding" || paymentStatus === "refunded";
+  return true;
 };
 
 // Messages raised by the database functions; anything else is a network problem.
@@ -34,6 +46,9 @@ const ERRORS: BookingError[] = [
   "seats_taken",
   "booking_not_found",
   "booking_not_cancellable",
+  "payment_error",
+  "refund_pending",
+  "hold_expired",
 ];
 
 export const bookingError = (message: string | undefined): BookingError =>
