@@ -362,6 +362,30 @@ test("confirm after expiry needs refund", async () => {
   assert.equal(last.row.outcome, "refunded");
 });
 
+test("cancel_booking retries the refund of a late-paid booking", async () => {
+  const h = await mustHold(userA, takeFreeSeats(1));
+  const session = await createPayment(h.reservation_id);
+  await expireNow(h.reservation_id);
+  const { error: expireError } = await service.rpc("expire_holds");
+  assert.equal(expireError, null);
+  const { row, intent } = await confirm(session);
+  assert.equal(row.outcome, "refund_needed");
+
+  const { data, error } = await userA.rpc("cancel_booking", { p_ref: h.ref });
+  assert.equal(error, null);
+  assert.equal(data.length, 1);
+  assert.equal(data[0].payment_id, row.payment_id);
+  assert.equal(data[0].payment_intent, intent);
+
+  const { error: refundError } = await service.rpc("mark_refunded", {
+    p_payment_intent: intent,
+    p_refund_id: `re_test_fake_${randomUUID()}`,
+  });
+  assert.equal(refundError, null);
+  const { error: after } = await userA.rpc("cancel_booking", { p_ref: h.ref });
+  assert.equal(after?.message, "booking_not_cancellable");
+});
+
 test("expire_payment expires a pending hold", async () => {
   const seats = takeFreeSeats(1);
   const h = await mustHold(userA, seats);

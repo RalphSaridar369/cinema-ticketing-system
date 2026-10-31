@@ -19,8 +19,15 @@ export const errorResponse = (code: string) => json({ error: code }, code === "s
 const intentId = (pi: string | Stripe.PaymentIntent | null) => (typeof pi === "string" ? pi : (pi?.id ?? null));
 
 // Refund the payment, then record it. Safe to repeat: Stripe dedupes on the key.
+// The webhook and the confirm route can race: Stripe answers 409 while the other call holds the key,
+// so wait and retry once, then let the caller fail (Stripe retries the webhook).
 export async function refund(paymentId: string, paymentIntent: string): Promise<void> {
-  const r = await stripe().refunds.create({ payment_intent: paymentIntent }, { idempotencyKey: "refund-" + paymentId });
+  const create = () => stripe().refunds.create({ payment_intent: paymentIntent }, { idempotencyKey: "refund-" + paymentId });
+  const r = await create().catch(async (e: unknown) => {
+    if ((e as { code?: string })?.code !== "idempotency_key_in_use") throw e;
+    await new Promise((done) => setTimeout(done, 1000));
+    return create();
+  });
   dbCheck(await serviceDb().rpc("mark_refunded", { p_payment_intent: paymentIntent, p_refund_id: r.id }));
 }
 

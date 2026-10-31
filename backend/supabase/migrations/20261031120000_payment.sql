@@ -465,7 +465,8 @@ begin
         raise exception 'booking_not_found';
     end if;
 
-    if v_status = 'cancelled' then
+    -- Cancelled, or expired and paid late: a refund still owed is returned for retry.
+    if v_status in ('cancelled', 'expired') then
         select p.id, p.stripe_payment_intent_id, p.amount into v_payment, v_intent, v_amount
         from public.payment p
         where p.reservation_id = v_reservation and p.status = 'refunding'

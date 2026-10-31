@@ -194,9 +194,12 @@ export async function releaseCheckout(ref: string): Promise<void> {
 // Asks for the outcome of a paid session, then reloads whatever it changed.
 export async function confirmCheckout(sessionId: string): Promise<"confirmed" | "refunded" | "pending" | "error"> {
   const res = await postApi("/api/checkout/confirm", { sessionId });
-  if (errorOf(res)) return "error";
   const outcome = res.outcome;
-  if (outcome !== "confirmed" && outcome !== "refunded" && outcome !== "pending") return "error";
+  if (errorOf(res) || (outcome !== "confirmed" && outcome !== "refunded" && outcome !== "pending")) {
+    // The webhook may have settled it already, so look before giving up.
+    await refreshBookings();
+    return "error";
+  }
   await Promise.all([refreshBookings(), refresh("seatmap:"), refresh(SEATS_LEFT)]);
   return outcome;
 }

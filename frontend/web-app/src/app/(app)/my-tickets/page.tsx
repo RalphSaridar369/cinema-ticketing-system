@@ -68,7 +68,7 @@ export default function MyTicketsPage() {
                 ) : b.status === "Cancelled" ? (
                   <Badge tone="err">CANCELLED</Badge>
                 ) : b.status === "Refunded" ? (
-                  <Badge tone="err">REFUNDED</Badge>
+                  <Badge tone="err">{b.refund === "refunding" ? "REFUND PROCESSING" : "REFUNDED"}</Badge>
                 ) : (
                   <Badge tone="muted">COMPLETED</Badge>
                 )}

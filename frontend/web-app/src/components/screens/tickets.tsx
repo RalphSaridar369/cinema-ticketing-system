@@ -39,8 +39,9 @@ export function Tickets({ params, searchParams }: Props) {
     const poll = async () => {
       const res = await confirmCheckout(sessionId);
       if (!live) return;
-      if (res !== "pending") return setOutcome(res);
-      if (Date.now() - started >= 30_000) return setOutcome("timeout");
+      // A failed confirm counts as one more poll.
+      if (res !== "pending" && res !== "error") return setOutcome(res);
+      if (Date.now() - started >= 30_000) return setOutcome(res === "error" ? "error" : "timeout");
       setOutcome("pending");
       timer = setTimeout(poll, 2000);
     };
@@ -71,14 +72,6 @@ export function Tickets({ params, searchParams }: Props) {
   if (bookings.error) return <LoadError what="this booking" onRetry={() => s.userId && retry(bookingsKey(s.userId))} />;
   if (!bookings.data || reloading) return <ScreenFallback />;
   const b = bookings.data.find((x) => x.ref === ref);
-  if (b && outcome === "refunded" && b.status === "Refunded")
-    return (
-      <NotFoundNote
-        title={`Your seat hold ran out before payment finished. You’ve been refunded ${money(b.paid ?? b.total)}.`}
-        href={`/book/${b.showtime}`}
-        cta="Choose seats again"
-      />
-    );
   if (!b && settling)
     return (
       <div className="px-page flex flex-col items-center gap-3 pt-16 text-center" role="status">
@@ -109,6 +102,34 @@ export function Tickets({ params, searchParams }: Props) {
     } else if (res.error === "refund_pending") setRefundPending(true);
     else setCancelError(res.error === "booking_not_cancellable" ? "This booking can no longer be cancelled" : "Couldn’t cancel. Try again.");
   };
+
+  // A late-paid booking never became tickets, whether we got here from Stripe or from My Tickets.
+  if (b.status === "Refunded")
+    return (
+      <>
+        <NotFoundNote
+          title={
+            b.refund === "refunding"
+              ? `Your seat hold ran out before payment finished. Your refund of ${money(b.paid ?? b.total)} is processing.`
+              : `Your seat hold ran out before payment finished. You’ve been refunded ${money(b.paid ?? b.total)}.`
+          }
+          href={`/book/${b.showtime}`}
+          cta="Choose seats again"
+        />
+        {b.refund === "refunding" && (
+          <div className="px-page flex flex-col items-center gap-2 pb-10 text-center">
+            <button disabled={busy} onClick={cancel} className="btn h-[50px] border border-line px-6 text-[15px] font-bold">
+              Retry refund
+            </button>
+            {cancelError && (
+              <p role="alert" className="text-sm font-semibold text-err">
+                {cancelError}
+              </p>
+            )}
+          </div>
+        )}
+      </>
+    );
 
   return (
     <div className="flex flex-col gap-4 pb-10 pt-[18px]">

@@ -5,7 +5,8 @@ import { MO, WD } from "@/lib/data";
 
 type Hold = { reservation_id: string; ref: string; seat_count: number; unit_price: number; released_sessions: string[] };
 
-const SESSION_MINUTES = 30;
+// Stripe rejects sessions that expire in under 30 minutes, so leave a margin for clock skew and latency.
+const SESSION_MINUTES = 31;
 
 // Hold the seats, then open a Stripe Checkout session for them.
 export async function POST(req: Request) {
