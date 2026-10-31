@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useApp, useBookHref } from "@/components/app-shell";
-import { Badge, PageTitle } from "@/components/ui";
+import { Poster } from "@/components/movie-cards";
+import { Badge, LoadError, PageTitle, ScreenFallback } from "@/components/ui";
+import { bookingsKey, useMyBookings } from "@/lib/booking";
+import { retry } from "@/lib/catalog";
 import { ticketCount } from "@/lib/data";
 
 type Tab = "upcoming" | "past";
@@ -12,7 +15,10 @@ export default function MyTicketsPage() {
   const s = useApp();
   const [tab, setTab] = useState<Tab>("upcoming");
   const bookHref = useBookHref(s);
-  const list = s.bookings.filter((b) => (b.status === "Confirmed") === (tab === "upcoming"));
+  const bookings = useMyBookings(s.userId);
+  // Upcoming: soonest showtime first; Past keeps the loaded newest-first order.
+  const list = (bookings.data ?? []).filter((b) => b.upcoming === (tab === "upcoming"));
+  if (tab === "upcoming") list.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
   return (
     <div className="px-page flex flex-col gap-[18px] pb-10 pt-4">
@@ -31,7 +37,10 @@ export default function MyTicketsPage() {
         ))}
       </div>
 
-      {!list.length && (
+      {bookings.error && <LoadError what="your tickets" onRetry={() => s.userId && retry(bookingsKey(s.userId))} />}
+      {!bookings.data && !bookings.error && <ScreenFallback />}
+
+      {bookings.data && !list.length && (
         <div className="flex flex-col items-center gap-3 rounded-[20px] border border-dashed border-line px-6 py-12 text-center">
           <div className="relative h-14 w-[84px] rounded-[10px] border-[1.5px] border-gold" aria-hidden>
             <span className="absolute -left-2 top-[18px] h-4 w-4 rounded-full border-r-[1.5px] border-gold bg-bg" />
@@ -48,13 +57,21 @@ export default function MyTicketsPage() {
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(380px,100%),1fr))] gap-3.5">
         {list.map((b) => (
           <Link key={b.ref} href={`/tickets/${b.ref}`} className="card card-link flex gap-4 rounded-[18px] p-3.5">
-            <div className="poster-deep aspect-[2/3] w-[78px] flex-none rounded-[10px]" />
+            <div className="poster-deep relative aspect-[2/3] w-[78px] flex-none rounded-[10px]">
+              <Poster path={b.movie.poster} title={b.movie.title} sizes="78px" />
+            </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex items-start justify-between gap-2">
-                <span className="text-[17px] font-extrabold">{b.title}</span>
-                {b.status === "Confirmed" && <Badge>CONFIRMED</Badge>}
-                {b.status === "Completed" && <Badge tone="muted">COMPLETED</Badge>}
-                {b.status === "Cancelled" && <Badge tone="err">CANCELLED</Badge>}
+                <span className="text-[17px] font-extrabold">{b.movie.title}</span>
+                {b.upcoming ? (
+                  <Badge>CONFIRMED</Badge>
+                ) : b.status === "Cancelled" ? (
+                  <Badge tone="err">CANCELLED</Badge>
+                ) : b.status === "Refunded" ? (
+                  <Badge tone="err">{b.refund === "refunding" ? "REFUND PROCESSING" : "REFUNDED"}</Badge>
+                ) : (
+                  <Badge tone="muted">COMPLETED</Badge>
+                )}
               </div>
               <span className="text-[13.5px] text-mu">
                 {b.branchName}, {b.city}
@@ -63,7 +80,7 @@ export default function MyTicketsPage() {
                 {b.date} · {b.start}
               </span>
               <span className="mt-auto text-[13px] text-mu">
-                {ticketCount(b.seats.length)} · {b.seats.join(", ")}
+                {ticketCount(b.tickets.length)} · {b.tickets.map((x) => x.label).join(", ")}
               </span>
             </div>
             <span className="self-center text-mu">›</span>

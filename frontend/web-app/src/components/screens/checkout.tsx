@@ -2,76 +2,98 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
-import { useApp } from "@/components/app-shell";
 import { Poster } from "@/components/movie-cards";
 import { BackLink, LoadError, NotFoundNote, PageTitle, ScreenFallback, Spinner } from "@/components/ui";
-import { CATALOG_KEY, branchById, retry, showtimeById, useCatalog } from "@/lib/catalog";
-import { MAX_SEATS, getDays, money, seatSort, unavailableSeats } from "@/lib/data";
-import { actions } from "@/lib/store";
+import { releaseCheckout, seatMapKey, startCheckout, useSeatMap } from "@/lib/booking";
+import { seatLabel, seatsFromLabels, sortSeats } from "@/lib/booking-view";
+import { CATALOG_KEY, branchById, refresh, retry, showtimeById, useCatalog, type Branch, type Movie, type Showtime } from "@/lib/catalog";
+import { MAX_SEATS, getDays, money } from "@/lib/data";
 
 type Props = {
   params: Promise<{ showtime: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const newRef = () => "VLR-" + Math.random().toString(36).slice(2, 7).toUpperCase();
-
 export function Checkout({ params, searchParams }: Props) {
-  const s = useApp();
-  const router = useRouter();
   const { showtime } = use(params);
-  const raw = use(searchParams).seats;
-  const [pending, setPending] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
-
+  const query = use(searchParams);
+  const raw = query.seats;
+  const released = typeof query.released === "string" ? query.released : null;
+  const router = useRouter();
   const catalog = useCatalog();
   const c = catalog.data;
+  // Back from Stripe: free the held seats once, then drop the param so a reload doesn't repeat it.
+  // The ref guard keeps StrictMode's double effect from releasing twice.
+  const releasing = useRef<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  useEffect(() => {
+    if (!released || releasing.current === released) return;
+    releasing.current = released;
+    void (async () => {
+      await releaseCheckout(released);
+      await refresh(seatMapKey(showtime));
+      setDone(released);
+      router.replace(`/book/${showtime}/checkout?seats=${typeof raw === "string" ? raw : ""}`);
+    })();
+  }, [released, showtime, raw, router]);
   if (catalog.error)
     return (
       <div className="px-page pt-10">
         <LoadError what="this showtime" onRetry={() => retry(CATALOG_KEY)} />
       </div>
     );
-  if (!c) return <ScreenFallback />;
+  if (!c || (released && done !== released)) return <ScreenFallback />;
 
   const st = showtimeById(c, showtime);
   const m = st && c.movies.find((x) => x.id === st.movie);
   const b = st && branchById(c, st.branch);
-  const taken = st ? unavailableSeats(st, s.bookings) : new Set<string>();
-  const requested = (typeof raw === "string" ? raw.split(",") : []).filter(Boolean);
-  const seats = seatSort([...new Set(requested)]);
-  const valid =
-    st && !st.soldOut && seats.length > 0 && seats.length <= MAX_SEATS && seats.every((id) => /^[A-Y]([1-9]|10)$/.test(id) && !taken.has(id));
+  if (!st || !m || !b) return <NotFoundNote title="Those seats aren’t available" href="/branches" cta="Choose seats again" />;
+  const labels = typeof raw === "string" ? raw.split(",").filter(Boolean) : [];
+  return <Review st={st} m={m} b={b} labels={labels} />;
+}
 
-  if (!st || !m || !b || !valid) return <NotFoundNote title="Those seats aren’t available" href={st ? `/book/${st.id}` : "/branches"} cta="Choose seats again" />;
+function Review({ st, m, b, labels }: { st: Showtime; m: Movie; b: Branch; labels: string[] }) {
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [lost, setLost] = useState(false);
+  // Errors where retrying cannot work.
+  const [dead, setDead] = useState<"showtime_unavailable" | "invalid_seats" | null>(null);
+  const map = useSeatMap(st.id, st.room.id);
+  if (map.error)
+    return (
+      <div className="px-page pt-10">
+        <LoadError what="the seat map" onRetry={() => retry(seatMapKey(st.id))} />
+      </div>
+    );
+  if (!map.data) return <ScreenFallback />;
 
+  const { taken } = map.data;
+  const resolved = seatsFromLabels(labels, map.data.seats);
+  const valid = resolved && resolved.length > 0 && resolved.length <= MAX_SEATS && resolved.every((x) => !taken.has(x.id));
+  if (dead === "showtime_unavailable") return <NotFoundNote title="This showtime has already started" href="/branches" cta="Pick another showtime" />;
+  if (dead === "invalid_seats") return <NotFoundNote title="Those seats aren’t available" href={`/book/${st.id}`} cta="Choose seats again" />;
+  if (lost) return <NotFoundNote title="Those seats were just taken" href={`/book/${st.id}`} cta="Choose seats again" />;
+  // While starting payment, our own held seats may show as taken; keep the page until the redirect.
+  if (!resolved || (!valid && !pending)) return <NotFoundNote title="Those seats aren’t available" href={`/book/${st.id}`} cta="Choose seats again" />;
+
+  const picked = sortSeats(resolved);
+  const seats = picked.map(seatLabel);
   const day = getDays()[st.day].label;
   const total = money(st.price * seats.length);
 
-  const confirm = () => {
+  const pay = async () => {
     setPending(true);
-    timer.current = setTimeout(() => {
-      const ref = newRef();
-      actions.addBooking({
-        ref,
-        showtime: st.id,
-        movie: m.id,
-        title: m.title,
-        branch: b.id,
-        branchName: b.name,
-        city: b.city,
-        date: day,
-        start: st.start,
-        end: st.end,
-        room: st.room.name,
-        format: st.room.format,
-        seats,
-        price: st.price,
-        status: "Confirmed",
-      });
-      router.replace(`/tickets/${ref}?new=1`);
-    }, 1800);
+    setFailed(false);
+    const res = await startCheckout(st.id, picked.map((x) => x.id));
+    // Stay in the pending dialog while the browser leaves for Stripe.
+    if ("url" in res) {
+      window.location.assign(res.url);
+      return;
+    }
+    setPending(false);
+    if (res.error === "seats_taken") setLost(true);
+    else if (res.error === "showtime_unavailable" || res.error === "invalid_seats") setDead(res.error);
+    else setFailed(true);
   };
 
   const summary: [string, string][] = [
@@ -120,16 +142,17 @@ export function Checkout({ params, searchParams }: Props) {
             <span className="text-base font-bold">Total</span>
             <span className="font-display text-[28px] font-semibold text-gold-ink">{total}</span>
           </div>
-          <button onClick={confirm} disabled={pending} className="btn btn-gold h-14 text-base disabled:text-tx!">
+          <button onClick={pay} disabled={pending} className="btn btn-gold h-14 text-base disabled:text-tx!">
             {pending ? (
               <>
-                <Spinner /> Confirming…
+                <Spinner /> Taking you to payment…
               </>
             ) : (
-              "Confirm booking"
+              `Pay ${total}`
             )}
           </button>
-          <p className="text-[12.5px] leading-normal text-mu">Pay at the box office or with the card on your account. Seats are held for 10 minutes.</p>
+          {failed && <p className="text-[13px] font-bold text-err">Couldn’t start payment. Try again.</p>}
+          <p className="text-[12.5px] leading-normal text-mu">Seats are held for 10 minutes once you continue to payment. Test mode: no real card is charged.</p>
         </section>
       </div>
 
@@ -137,9 +160,9 @@ export function Checkout({ params, searchParams }: Props) {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-scrim p-6">
           <div role="alertdialog" aria-live="polite" className="card flex w-full max-w-[340px] flex-col items-center gap-3 rounded-[22px] p-7 text-center">
             <Spinner size={44} />
-            <span className="font-display text-[19px] font-semibold">Confirming your booking</span>
+            <span className="font-display text-[19px] font-semibold">Taking you to payment</span>
             <span className="rounded-full border border-gold px-[9px] py-1 font-mono text-[11px] font-medium tracking-[.08em] text-gold-ink">STATUS · PENDING</span>
-            <span className="text-sm leading-normal text-mu">Holding seats {seats.join(", ")}. This takes a few seconds.</span>
+            <span className="text-sm leading-normal text-mu">Holding seats {seats.join(", ")} for 10 minutes.</span>
           </div>
         </div>
       )}

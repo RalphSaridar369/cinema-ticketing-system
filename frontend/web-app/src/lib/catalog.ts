@@ -71,7 +71,7 @@ export const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-const clock = (d: Date) => String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+export const clock = (d: Date) => String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 const languages = new Intl.DisplayNames(["en"], { type: "language" });
@@ -94,6 +94,7 @@ const releaseLabel = (iso: string | null) => {
 export const posterUrl = (path: string, size = "w500") => IMAGE_BASE + size + path;
 
 const FORMATS: Record<string, string> = { "standard 2D": "Standard 2D", "standard 3D": "Standard 3D", "vip 2D": "VIP", "imax IMAX": "IMAX" };
+export const roomFormat = (roomType: string, screenType: string) => FORMATS[`${roomType} ${screenType}`] ?? screenType;
 
 type MovieRow = {
   id: string;
@@ -215,7 +216,7 @@ async function loadCatalog(): Promise<Catalog> {
         branch: r.branch_id,
         name: r.name,
         kind: r.room_type,
-        format: FORMATS[`${r.room_type} ${r.screen_type}`] ?? r.screen_type,
+        format: roomFormat(r.room_type, r.screen_type),
         rows: Math.min(25, Math.ceil(r.capacity / 10)),
       },
     ]),
@@ -364,23 +365,28 @@ export type Resource<T> = { data?: T; error?: string };
 
 const cache = new Map<string, Resource<unknown>>();
 const loaders = new Map<string, () => Promise<unknown>>();
-const inflight = new Set<string>();
+const inflight = new Map<string, Promise<void>>();
 const listeners = new Set<() => void>();
 const EMPTY: Resource<never> = {};
 
 // `force` reloads a key that already has data, keeping the old data on
-// screen until the new load lands.
-function fetchInto<T>(key: string, load: () => Promise<T>, force = false) {
+// screen until the new load lands. A forced load of a key already in flight
+// waits for that one, then loads again, so its result is never older than the
+// call. Resolves once the load has landed.
+function fetchInto<T>(key: string, load: () => Promise<T>, force = false): Promise<void> {
   loaders.set(key, load);
-  if (inflight.has(key) || (cache.has(key) && !force)) return;
-  inflight.add(key);
-  load()
-    .then((data) => cache.set(key, { data }))
-    .catch((e: Error) => cache.set(key, { error: e.message }))
+  const running = inflight.get(key);
+  if (running) return force ? running.then(() => fetchInto(key, load, true)) : running;
+  if (cache.has(key) && !force) return Promise.resolve();
+  const p = load()
+    .then((data) => void cache.set(key, { data }))
+    .catch((e: Error) => void cache.set(key, { error: e.message }))
     .finally(() => {
       inflight.delete(key);
       listeners.forEach((l) => l());
     });
+  inflight.set(key, p);
+  return p;
 }
 
 function subscribe(l: () => void) {
@@ -388,7 +394,7 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l);
 }
 
-function useResource<T>(key: string | null, load: () => Promise<T>): Resource<T> {
+export function useResource<T>(key: string | null, load: () => Promise<T>): Resource<T> {
   const res = useSyncExternalStore(
     subscribe,
     () => (key ? (cache.get(key) as Resource<T>) : undefined) ?? EMPTY,
@@ -402,6 +408,9 @@ function useResource<T>(key: string | null, load: () => Promise<T>): Resource<T>
   return res;
 }
 
+// Whether a load for `key` has already landed.
+export const hasCached = (key: string) => cache.has(key);
+
 // Runs a failed load again.
 export function retry(key: string) {
   const load = loaders.get(key);
@@ -411,9 +420,12 @@ export function retry(key: string) {
   fetchInto(key, load);
 }
 
-// Reloads every cached load whose key starts with `prefix`.
-export function refresh(prefix: string) {
-  for (const [key, load] of loaders) if (key.startsWith(prefix)) fetchInto(key, load, true);
+// Reloads every cached load whose key starts with `prefix`. Resolves when all
+// of them have landed.
+export async function refresh(prefix: string): Promise<void> {
+  const reloads: Promise<void>[] = [];
+  for (const [key, load] of loaders) if (key.startsWith(prefix)) reloads.push(fetchInto(key, load, true));
+  await Promise.all(reloads);
 }
 
 export const TASTE_KEY = "taste:";

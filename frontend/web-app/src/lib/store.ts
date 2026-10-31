@@ -1,16 +1,14 @@
 import type { Session } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
 import { TASTE_KEY, refresh } from "./catalog";
-import type { Booking } from "./data";
 import { supabase } from "./supabase";
 import { STORAGE_KEY as KEY, applyTheme, type Theme } from "./theme";
 
 export type { Theme };
 
 // Client app state, persisted to localStorage. Auth, the profile, favorites,
-// watchlist and ratings come from Supabase (the saved copy only bridges the
-// moment before the session loads); bookings and preferences still live only
-// here.
+// watchlist, ratings and bookings come from Supabase (the saved copy only
+// bridges the moment before the session loads); preferences live only here.
 
 export type Profile = {
   first: string;
@@ -39,7 +37,6 @@ export type AppState = {
   // False until lists and ratings saved by earlier builds, which kept them only
   // in this browser, have been copied to the account.
   listsSynced: boolean;
-  bookings: Booking[];
   theme: Theme;
 };
 
@@ -57,7 +54,6 @@ const initial = (): AppState => ({
   watchlist: [],
   ratings: {},
   listsSynced: false,
-  bookings: [],
   theme: "dark",
 });
 
@@ -79,13 +75,15 @@ function load(): AppState {
 // can't refer to a database row.
 function fromMockIds(saved: Partial<AppState>): Partial<AppState> {
   const ids = (a: unknown) => (Array.isArray(a) ? a.filter((x): x is string => typeof x === "string") : []);
+  // Bookings now live in the database; drop the old local copy.
+  const rest: Record<string, unknown> = { ...saved };
+  delete rest.bookings;
   return {
-    ...saved,
+    ...rest,
     branch: typeof saved.branch === "string" ? saved.branch : null,
     favorites: ids(saved.favorites),
     watchlist: ids(saved.watchlist),
     ratings: Object.fromEntries(Object.entries(saved.ratings ?? {}).filter(([k]) => !/^\d+$/.test(k))),
-    bookings: (saved.bookings ?? []).filter((b) => typeof b.movie === "string" && typeof b.title === "string"),
   };
 }
 
@@ -297,9 +295,6 @@ export const actions = {
         }),
     );
   },
-  addBooking(b: Booking) {
-    setState((s) => ({ bookings: [b, ...s.bookings] }));
-  },
 };
 
 // Runs a write for the signed-in user. On failure, `undo` puts the screen
@@ -312,7 +307,7 @@ async function save(write: (userId: string) => PromiseLike<{ error: unknown }>, 
     undo();
     say("Couldn’t save that. Try again.");
   }
-  refresh(TASTE_KEY);
+  void refresh(TASTE_KEY);
 }
 
 // Toasts are ephemeral and kept outside the persisted store.

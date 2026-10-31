@@ -9,6 +9,7 @@ import { Poster } from "@/components/movie-cards";
 import { ShowtimeRow } from "@/components/showtimes";
 import { DayPicker, LoadError, NotFoundNote, ScreenFallback, Stars } from "@/components/ui";
 import { CATALOG_KEY, branchById, posterUrl, retry, showtimesFor, useCatalog, useMovieDetail, type Catalog, type MovieDetail } from "@/lib/catalog";
+import { useSeatsLeft } from "@/lib/booking";
 import { getDays } from "@/lib/data";
 import { actions, say, setState } from "@/lib/store";
 
@@ -47,6 +48,9 @@ function Details({ m, c }: { m: MovieDetail; c: Catalog }) {
     .filter((g) => g.items.length);
   const anyOn = (d: number) => showtimesFor(c, branch?.id ?? null, movieId, d).length > 0;
   const next = groups.length ? -1 : days.findIndex((d) => d.index > s.day && anyOn(d.index));
+
+  // One seats-left lookup for every showtime listed; rows show nothing until it loads.
+  const left = useSeatsLeft(groups.flatMap((g) => g.items.map((st) => st.id))).data;
 
   const fav = s.favorites.includes(movieId);
   const wl = s.watchlist.includes(movieId);
@@ -172,7 +176,7 @@ function Details({ m, c }: { m: MovieDetail; c: Catalog }) {
                 </span>
               )}
               {items.map((st) => (
-                <ShowtimeRow key={st.id} st={st} />
+                <ShowtimeRow key={st.id} st={st} left={left?.get(st.id)} />
               ))}
             </div>
           ))}
