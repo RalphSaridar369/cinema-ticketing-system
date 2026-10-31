@@ -1,5 +1,7 @@
-// Integration test for the booking functions (book_seats, cancel_booking,
+// Integration test for the booking functions (hold_seats, cancel_booking,
 // showtime_taken_seats, showtime_seats_left) against the live project.
+// Bookings are made the way the web app does it: hold the seats, then confirm
+// a fake Stripe payment as the service client.
 // It creates two temporary auth users and deletes them at the end; their
 // reservations and tickets go with them through the foreign key cascades.
 //
@@ -92,8 +94,21 @@ async function reservationCount(client: SupabaseClient): Promise<number> {
   return count ?? 0;
 }
 
+// Holds the seats, then confirms a fake paid session; resolves with the ref.
+// The payment intent of the fake payment is returned for refund tests.
 async function book(client: SupabaseClient, seats: string[], showtimeId = showtime.id) {
-  return client.rpc("book_seats", { p_showtime: showtimeId, p_seats: seats });
+  const held = await client.rpc("hold_seats", { p_showtime: showtimeId, p_seats: seats });
+  if (held.error) return { data: null, error: held.error, paymentIntent: null };
+  const { reservation_id, ref } = held.data[0];
+
+  const session = `cs_test_fake_${randomUUID()}`;
+  const paymentIntent = `pi_test_fake_${randomUUID()}`;
+  const created = await service.rpc("create_payment", { p_reservation: reservation_id, p_session_id: session });
+  if (created.error) throw created.error;
+  const confirmed = await service.rpc("confirm_payment", { p_session_id: session, p_payment_intent: paymentIntent });
+  if (confirmed.error) throw confirmed.error;
+  assert.equal(confirmed.data[0].outcome, "confirmed");
+  return { data: ref as string, error: null, paymentIntent };
 }
 
 before(async () => {
@@ -280,10 +295,16 @@ test("cancel frees seats", async () => {
 });
 
 test("cancel rules", async () => {
-  const { data: ref, error } = await book(userA, takeFreeSeats(1));
+  const { data: ref, error, paymentIntent } = await book(userA, takeFreeSeats(1));
   assert.equal(error, null);
   const { error: first } = await userA.rpc("cancel_booking", { p_ref: ref });
   assert.equal(first, null);
+  // Once the refund is done there is nothing left to cancel.
+  const { error: refundError } = await service.rpc("mark_refunded", {
+    p_payment_intent: paymentIntent,
+    p_refund_id: `re_test_fake_${randomUUID()}`,
+  });
+  assert.equal(refundError, null);
   const { error: second } = await userA.rpc("cancel_booking", { p_ref: ref });
   assert.equal(second?.message, "booking_not_cancellable");
 
@@ -305,10 +326,10 @@ test("cancel rules", async () => {
 });
 
 test("signed out", async () => {
-  const { error } = await anon.rpc("book_seats", {
+  const { error } = await anon.rpc("hold_seats", {
     p_showtime: showtime.id,
     p_seats: [freeSeats[freeSeats.length - 1]],
   });
-  assert.ok(error, "anon should not be able to call book_seats");
+  assert.ok(error, "anon should not be able to call hold_seats");
   assert.match(error.message, /permission denied/);
 });
