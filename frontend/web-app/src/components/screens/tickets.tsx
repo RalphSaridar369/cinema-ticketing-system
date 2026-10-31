@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useApp } from "@/components/app-shell";
 import { BackLink, LoadError, Modal, NotFoundNote, ScreenFallback, Spinner } from "@/components/ui";
 import { bookingsKey, cancelBooking, confirmCheckout, useMyBookings, type Booking } from "@/lib/booking";
@@ -30,10 +30,10 @@ export function Tickets({ params, searchParams }: Props) {
   const [refundPending, setRefundPending] = useState(false);
   // Outcome of the Stripe return: null while unknown, "pending" while polling, "timeout" after 30 s.
   const [outcome, setOutcome] = useState<"confirmed" | "refunded" | "pending" | "timeout" | "error" | null>(null);
-  const confirmed = useRef<string | null>(null);
   useEffect(() => {
-    if (!sessionId || confirmed.current === sessionId) return;
-    confirmed.current = sessionId;
+    if (!sessionId) return;
+    // Each run polls on its own and stops on cleanup, so StrictMode's second run isn't blocked
+    // (confirming is idempotent on the server).
     let live = true;
     const started = Date.now();
     const poll = async () => {
@@ -127,7 +127,8 @@ export function Tickets({ params, searchParams }: Props) {
         <span className="text-sm text-mu">
           {ticketCount(n)} · Booking <span className="font-mono text-tx">{b.ref}</span> · {b.status}
         </span>
-        {b.refund && b.paid !== null && <span className="text-sm font-semibold text-mu">Refunded {money(b.paid)}</span>}
+        {b.refund === "refunded" && b.paid !== null && <span className="text-sm font-semibold text-mu">Refunded {money(b.paid)}</span>}
+        {b.refund === "refunding" && <span className="text-sm font-semibold text-mu">Refund processing</span>}
       </div>
 
       <div className="overflow-hidden pb-2 pt-1" aria-roledescription="carousel">
@@ -171,6 +172,19 @@ export function Tickets({ params, searchParams }: Props) {
           <Link href="/my-tickets" className="btn btn-gold col-span-2 h-[54px] text-base">
             Go to My Tickets
           </Link>
+        )}
+        {b.refund === "refunding" && (
+          <button
+            disabled={busy}
+            onClick={() => {
+              setRefundPending(true);
+              setConfirming(true);
+              void cancel();
+            }}
+            className="btn col-span-2 h-[50px] border border-line text-[15px] font-bold"
+          >
+            Retry refund
+          </button>
         )}
         {b.upcoming && (
           <button onClick={() => setConfirming(true)} className="btn col-span-2 h-[50px] border border-line text-[15px] font-bold text-err">
